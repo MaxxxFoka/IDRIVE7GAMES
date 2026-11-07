@@ -127,7 +127,7 @@ function fakeApi(pedal) {
 
 test('module shape', () => {
     assert.strictEqual(mod.id, 'rev-keeper');
-    assert.ok(mod.title.length <= 18 && mod.blurb.length <= 40);
+    assert.ok(mod.title.length <= 16 && mod.blurb.length <= 28);
     assert.deepStrictEqual(mod.needs, ['pedal']);
     assert.strictEqual(mod.score.lower, false);
     assert.strictEqual(typeof mod.create, 'function');
