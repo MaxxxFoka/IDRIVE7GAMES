@@ -96,7 +96,7 @@ class Game {
 module.exports = {
     id: 'brick-breaker',
     title: 'Brick Breaker',
-    blurb: 'Knock out the wall with the knob or a finger',
+    blurb: 'Smash the wall of bricks',
     order: 50,
     needs: [],
     score: { unit: 'pts', lower: false },
