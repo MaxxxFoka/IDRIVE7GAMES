@@ -514,8 +514,8 @@ setInterval(() => {
 }, 1000).unref();
 
 /* ---------------- the page's messages ---------------- */
-const Sig = { mode: 'demo', v: { rpm: 900, speed: 0, coolant: 90, oil: 95, gear: 'P', gLong: 0, gLat: 0, torque: 40 } };
-const SIG_KEYS = ['rpm', 'speed', 'coolant', 'oil', 'gLong', 'gLat', 'torque'];
+const Sig = { mode: 'demo', v: { rpm: 900, speed: 0, coolant: 90, oil: 95, gear: 'P', gLong: 0, gLat: 0, torque: 40, steer: 0, pedal: 0, handbrake: 1 } };
+const SIG_KEYS = ['rpm', 'speed', 'coolant', 'oil', 'gLong', 'gLat', 'torque', 'steer', 'pedal', 'handbrake'];
 function onPage(ws, m) {
     switch (m.t) {
     case 'tick': {
@@ -618,7 +618,7 @@ function build() {
     App.waiting = null;
     setStatus('building');
     let outText = '';
-    const p = App.building = spawn('python3', [path.join(ROOT, 'kit', 'tools', 'build.py'), id], { cwd: ROOT });
+    const p = App.building = spawn('python3', [path.join(ROOT, 'kit', 'tools', 'build.py')].concat(fs.existsSync(path.join(ROOT, 'oap-sdk', 'index.js')) ? [] : ['--preview-only'], [id]), { cwd: ROOT });
     p.stdout.on('data', (d) => { outText += d; });
     p.stderr.on('data', (d) => { outText += d; });
     p.on('error', (e) => { outText += String(e); });

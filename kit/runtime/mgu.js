@@ -561,6 +561,8 @@ async function runInner(impl) {
         onTab(fn) { display.onTab = fn; },
         /** onTap(fn): fn(x, y) for a tap on the page (app drawing px), where the kit runs the screen. */
         onTap(fn) { display.onTap = fn; },
+        /** onTouch(fn): fn(phase, x, y) for every finger event (1 down, 2 move, 3 up; app drawing px), e.g. a game's drag. */
+        onTouch(fn) { display.onTouch = fn; },
         /** Show a sheet (sheet.js) over the page; false where it can't be (software path, other renderers). */
         sheet(sh) { return display.openSheet(sh); },
         /** hideButton(id): leave bar button id out where the kit runs the screen (its job is on the page there). */

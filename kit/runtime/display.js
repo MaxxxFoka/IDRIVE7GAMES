@@ -413,6 +413,8 @@ class Display {
      * running the screen also on a bar button (pressed), a sheet's targets, or the page (ctx.onTap).
      */
     _touch(phase, x, y) {
+        // every finger event on the page as it is (phase 1 down, 2 move, 3 up), for games (ctx.onTouch)
+        if (this.onTouch) { try { this.onTouch(phase, x, y); } catch (e) { this.log.error('touch', e); } }
         const inside = (r) => x >= r.x && x < r.x + r.w && y >= r.y && y < r.y + r.h;
         if (this.own()) {
             const pl = this.place, sx = x * pl.scale + pl.ox, sy = y * pl.scale + pl.oy;
