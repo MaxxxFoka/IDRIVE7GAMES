@@ -18,6 +18,7 @@
  */
 const { Engine } = require('./engine');
 const D = require('./draw');
+const look = require('./look');
 
 const RECT = { x: 0, y: 0, w: D.W, h: D.H };
 const QUIET = { info() {}, warn() {}, error() {} };
@@ -32,6 +33,7 @@ class Game {
         this.paused = false;
         this.ended = false;
         this.toast = { text: '', ms: 0, color: null };
+        this.fx = this.api.style ? new look.Fx(this.api.style) : null;
     }
 
     /** canvas px -> field y */
@@ -40,6 +42,7 @@ class Game {
     events() {
         const g = this.g;
         for (const e of g.takeEvents()) {
+            if (this.fx) this.fx.event(e, g);
             if (e.type === 'power') Object.assign(this.toast, { text: D.POWER_NAME[e.kind], color: D.C.power[e.kind], ms: 1400 });
             else if (e.type === 'clear') {
                 Object.assign(this.toast, { text: 'Level ' + e.level + ' cleared', color: null, ms: 1400 });
@@ -55,13 +58,16 @@ class Game {
     update(dt) {
         if (this.paused || this.ended) return;
         this.g.step(dt);
+        if (this.fx) this.fx.update(dt, this.g);
         if (this.toast.ms > 0) this.toast.ms = Math.max(0, this.toast.ms - dt);
         this.events();
     }
 
     draw(cv) {
         const best = this.api.best ? this.api.best() : null;
-        D.draw(cv, RECT, this.g, { best: best || 0, toast: this.toast, ended: this.ended });
+        const view = { best: best || 0, toast: this.toast, ended: this.ended };
+        if (this.fx) look.draw(cv, this.g, this.api.style, this.fx, view);
+        else D.draw(cv, RECT, this.g, view);
     }
 
     input(ev) {
@@ -100,6 +106,7 @@ module.exports = {
     order: 50,
     needs: [],
     score: { unit: 'pts', lower: false },
+    art: look.art,
     create(api) { return new Game(api); },
     Game,
 };
