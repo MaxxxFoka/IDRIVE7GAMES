@@ -1,0 +1,137 @@
+# Parked Games: the game interface
+
+Parked Games is one iDrive app (`apps/parked_games`) that holds every game. The shell owns
+everything around a game: the parked check, the menu, the controller, the steering wheel and
+pedal signals, pausing, and high scores. A game only plays.
+
+## Where a game lives
+
+```
+apps/parked_games/games/<id>/index.js     the game (required)
+apps/parked_games/games/<id>/*.js         any other modules it needs (require('./logic'))
+```
+
+The shell finds games at start by reading `games/*/index.js`, so adding a game needs no change to
+`app.json` or to the shell. Each folder is copied into the package as it is.
+
+Rules:
+
+- **Node 8** runs this on the car: no `?.`, no `??`, no class fields, no object spread (`{...a}`);
+  use `Object.assign`. Arrow functions, classes, `const`/`let`, template strings and `async` are fine.
+- **No new signals.** The shell subscribes to every vehicle signal (the app has one `app.json`). If a
+  game needs one more, ask the shell's owner to add it to `api`.
+- **No `require` of the kit** from a game: everything comes through `api` and `cv`. Keep the game logic
+  free of drawing, so it can be tested with plain `node`.
+- **Original designs only.** Familiar genres are fine; no names, art, levels or rules of existing games.
+
+## The module
+
+```js
+module.exports = {
+    id: 'lane-runner',             // the folder's name
+    title: 'Lane Runner',          // menu title (ASCII, up to ~18 characters)
+    blurb: 'Steer between the cones',   // one line under the title (up to ~40 characters)
+    order: 10,                     // menu position, low first
+    needs: ['wheel'],              // inputs the game is built around: 'wheel', 'pedal' (or [] = knob / touch)
+    score: { unit: 'm', lower: false },  // unit shown after scores; lower: true when less is better (times)
+    create(api) { return new Game(api); },
+};
+```
+
+`create(api)` is called for **every round**: a new round is a new object, so a game needs no reset.
+
+## `api` (what the shell gives a game)
+
+| | |
+|---|---|
+| `api.W`, `api.H` | 1600, 520: the canvas size, in logical pixels |
+| `api.now()` | a steady clock in ms (never jumps) |
+| `api.random()` | 0 ≤ x < 1 |
+| `api.log.info/warn/error(...)` | the app's log |
+| `api.theme()` | the kit's colour theme: `bg`, `text`, `dim`, `accent`, `warn`, `crit`, `cold`, `panel` ... |
+| `api.best()` | the best score so far, or `null` |
+| `api.top()` | the best scores, best first: `[{ score, at }]` (up to 5; `at` = ms since 1970) |
+| `api.end(score)` | the round is over: the shell saves the score, shows the result and offers Play again. Call it once; after it `update` is not called any more (`draw` still is, under the result card) |
+| `api.steering()` | the steering angle in degrees, **+ = turned right (clockwise)**, or `null`. From the real wheel when the car allows it, else from the knob (see below). Not clamped: clamp to your own range (the design range is ±90°) |
+| `api.steerSource()` | `'wheel'`, `'knob'`, or `null` |
+| `api.pedal()` | the accelerator pedal in %, 0 to 100, or `null` |
+| `api.pedalSource()` | `'pedal'`, `'knob'`, or `null` |
+| `api.store.get(key)`, `api.store.set(key, value)` | this game's own saved values (JSON), kept across restarts |
+
+### When the wheel and pedal count
+
+- The whole app plays only while the car stands (≤ 3 km/h; setting "Parked only", on by default).
+  When the car moves the round pauses and the shell goes back to the menu.
+- **Steering wheel:** only with the gear in **P** and the **parking brake applied**.
+- **Accelerator pedal:** as for the wheel, and only with the **engine off** (it would rev the engine).
+- When the car doesn't allow them, or their signals don't arrive (the emulator, a bench), the shell
+  stands in with the **knob**, so every game can be played everywhere:
+  - a game that `needs: ['wheel']`: each knob click turns a virtual wheel by 6°, centred again
+    by a press (also sent to the game as `press`). `steerSource()` says `'knob'`.
+  - a game that `needs: ['pedal']` (and not the wheel): each click moves a virtual pedal by 5 %.
+  - a game that needs both: the knob steers, pushing the controller up (N) holds the pedal at 100 %.
+
+Read `api.steering()` and `api.pedal()` in `update`; they are not events.
+
+## The game object
+
+```js
+class Game {
+    update(dtMs) {}        // advance; dtMs since the last update, at most 50 (called only while playing)
+    draw(cv) {}            // draw the whole 1600 x 520 frame; called every frame, also while paused / ended
+    input(ev) {}           // one controller or touch event (below)
+    pause() {}             // optional: the round stops for now (BACK, a call, driving off)
+    resume() {}            // optional: it goes on
+}
+```
+
+Input events:
+
+| `ev` | |
+|---|---|
+| `{ type: 'knob', delta }` | the knob turned by `delta` clicks, + = clockwise |
+| `{ type: 'press' }` | the knob pressed |
+| `{ type: 'push', dir }` | the controller pushed `'N'`, `'E'`, `'S'` or `'W'` (sent once per push) |
+| `{ type: 'release' }` | the push let go (back in the middle) |
+| `{ type: 'touch', phase, x, y }` | a finger on the screen: `phase` `'down'`, `'move'`, `'up'`; x, y in canvas pixels |
+| `{ type: 'tap', x, y }` | a short tap (also sent as touch down / up) |
+
+BACK, MENU and OPTION always stay with the car's HMI: BACK leaves the game for the menu (the round is
+paused and can be continued).
+
+## Drawing (`cv`)
+
+`cv` is the kit's GPU recorder at 1600 x 520 logical pixels, already cleared to the theme's
+background. Colours are `'#rrggbb'` strings or `[r, g, b, a]` arrays (a = 0..255).
+
+| | |
+|---|---|
+| `cv.fillRect(x, y, w, h, c)` | |
+| `cv.roundRect(x, y, w, h, r, c)`, `cv.strokeRoundRect(x, y, w, h, r, width, c)` | |
+| `cv.gradientRect(x, y, w, h, stops)` | `stops` = `[[0, c0], [1, c1]]`, top to bottom |
+| `cv.circle(cx, cy, r, c)` | |
+| `cv.arc(cx, cy, r0, r1, a0, a1, c)` | a ring segment, angles in degrees |
+| `cv.line(xa, ya, xb, yb, width, c)`, `cv.polyline(pts, width, c)` | `pts` = `[[x, y], ...]` |
+| `cv.quad(pts, c)` | a filled four-corner shape, `pts` = `[[x, y] x 4]` (a triangle: repeat a corner) |
+| `cv.text(str, x, baselineY, size, c, { font, align })` | `font`: `label`, `bold`, `num`, `light`; `align`: `left`, `center`, `right`. Returns its width |
+| `cv.textWidth(str, size, opts)` | |
+| `cv.alpha(a)` ... `cv.alpha(1)` | draw see-through |
+| `cv.clip(x, y, w, h)` ... `cv.noclip()` | |
+
+Large text sizes only have digits and a few letters baked in; keep big numbers numeric and words
+at size 40 or below. There are no pixel reads.
+
+## Trying a game
+
+```sh
+python3 kit/tools/build.py --preview-only parked_games
+node kit/tools/emu.js parked_games          # http://localhost:8077
+```
+
+In the emulator: the mouse wheel or `[` `]` turns the knob, `Enter` presses, arrow keys push,
+`Backspace` is BACK. The panel's manual signals set speed, gear and engine speed. A save under
+`apps/parked_games/` rebuilds and restarts the app.
+
+Unit tests: put them next to the game as `games/<id>/test.js` (plain `node`, `assert`), run with
+`node apps/parked_games/games/<id>/test.js`. `node kit/tools/test_parked_games.js` checks every game
+against this interface.
