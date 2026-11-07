@@ -14,8 +14,9 @@
  * opts.native: ask for mgu-render's own dialect (mgu-render/1, the Store's renderer). There touch
  * claims and the controller grab work on one connection, and X_STATE says when the renderer has
  * the app on screen. A renderer that does not speak it answers READY alone and the connection
- * stays in the upstream dialect. Pixel images (op 18) are upstream only: an app that draws them
- * (Doom) connects without opts.native.
+ * stays in the upstream dialect. Pixel images (op 18) go in either dialect: upstream as opaque RGBA
+ * (message 9, nearest pixel), native as premultiplied RGBA up to 1024 a side (message 10, filtered,
+ * with alpha), and op 18's words are rewritten to the native order (x y w h r id) in frame().
  */
 const net = require('net');
 const fs = require('fs');
@@ -34,6 +35,28 @@ const CLAIM = 9, TOUCH = 105, CLOSED = 106;
 // mgu-render/1 (mgu-store native/mgu-render/PROTOCOL.md)
 const X = { MODE: 0x4d520001, GRAB: 0x4d520002, READY: 0x4d520101, STATE: 0x4d520102, CCU: 0x4d520103 };
 const X_MODE_LAYER = 1;
+
+/* words after each op (record.js play() reads the same); op 18 is rewritten for the native dialect */
+const OPW = { 1: 1, 2: 5, 4: 6, 5: 7, 7: 8, 8: 11, 9: 6, 12: 3, 13: 4, 14: 0, 15: 9, 16: 1, 17: 3, 18: 6 };
+/** A copy of a frame's words with each op 18 as native IMAGE x y w h r id (upstream: id ver x y w h). */
+function nativeImages(src) {
+    const u = new Uint32Array(src), f = new Float32Array(u.buffer);
+    let i = 0;
+    while (i < u.length) {
+        const op = u[i++];
+        if (op === 18) {
+            const id = u[i], x = f[i + 2], y = f[i + 3], w = f[i + 4], h = f[i + 5];
+            f[i] = x; f[i + 1] = y; f[i + 2] = w; f[i + 3] = h; f[i + 4] = 0; u[i + 5] = id;
+            i += 6;
+        } else if (op === 3) i += 5 + u[i + 4] * 2;
+        else if (op === 6) i += 6 + u[i + 5] * 2;
+        else if (op === 10) i += 1 + u[i] * 9;
+        else if (op === 11) i += 3 + u[i + 2] * 8;
+        else if (OPW[op] !== undefined) i += OPW[op];
+        else break;
+    }
+    return u;
+}
 
 function msg(type, payload) {
     const len = payload ? payload.length : 0;
@@ -298,10 +321,22 @@ class RenderClient extends EventEmitter {
     }
     /** upload a pixel image when this connection hasn't got its current version */
     _ensureImage(id) {
-        if (this.native) { if (!this.imgWarned) { this.imgWarned = true; this.log.warn('renderd: pixel images need the upstream dialect'); } return; }
         const im = rec.imageById.get(id);
         if (!im || !im.data) return;
         if (this.sent.image.get(id) === im.ver) return;
+        if (this.native) {
+            if (im.w > 1024 || im.h > 1024) { if (!this.imgWarned) { this.imgWarned = true; this.log.warn('renderd: image ' + id + ' over 1024 px a side'); } return; }
+            const n = im.w * im.h * 4, b = Buffer.allocUnsafe(8 + 12 + n), s = im.data;
+            b.writeUInt32LE(10, 0); b.writeUInt32LE(12 + n, 4);
+            b.writeUInt32LE(id, 8); b.writeUInt32LE(im.w, 12); b.writeUInt32LE(im.h, 16);
+            for (let i = 0; i < n; i += 4) {
+                const a = s[i + 3];
+                b[20 + i] = (s[i] * a + 127) / 255; b[21 + i] = (s[i + 1] * a + 127) / 255; b[22 + i] = (s[i + 2] * a + 127) / 255; b[23 + i] = a;
+            }
+            this._write(b);
+            this.sent.image.set(id, im.ver);
+            return;
+        }
         const n = im.w * im.h * 4, b = this._imageBuf(8 + 12 + n);
         b.writeUInt32LE(M.IMAGE, 0); b.writeUInt32LE(12 + n, 4);
         b.writeUInt32LE(id, 8); b.writeUInt32LE(im.w, 12); b.writeUInt32LE(im.h, 16);
@@ -328,7 +363,9 @@ class RenderClient extends EventEmitter {
         if (!this.ready || !this.placement) return false;
         this._ensureRes(r);
         this.waiting = true;
-        return this._write(msg(M.FRAME, words(r.words())));
+        let w = r.words();
+        if (this.native && r.images && r.images.size) w = nativeImages(w);
+        return this._write(msg(M.FRAME, words(w)));
     }
 }
 

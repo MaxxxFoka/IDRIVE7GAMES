@@ -135,6 +135,7 @@ function fakeCanvas() {
     });
     return cv;
 }
+const TX = new (require(path.join(APP, 'textures')).Textures)(require(path.join(__dirname, '..', 'runtime', 'record')), null);
 const THEME = { bg: '#000000', text: '#ffffff', dim: '#888888', accent: '#ff0000', warn: '#ffaa00', crit: '#ff0000', cold: '#3399ff', panel: '#1a1d22' };
 
 function play(g, opts) {
@@ -142,7 +143,7 @@ function play(g, opts) {
     const rnd = () => { seed = (seed * 1103515245 + 12345) & 0x7fffffff; return seed / 0x80000000; };
     const saved = {};
     const api = {
-        W: 1600, H: 520, now: () => t, random: rnd, log: { info() {}, warn() {}, error() {} }, theme: () => THEME, style: require(path.join(APP, 'style')),
+        W: 1600, H: 520, now: () => t, random: rnd, log: { info() {}, warn() {}, error() {} }, theme: () => THEME, style: require(path.join(APP, 'style')), look: () => opts.look || 'night', texture: (f) => TX.load(path.join(APP, 'games', g.id, f)),
         best: () => null, top: () => [], store: { get: (k) => saved[k], set: (k, v) => { saved[k] = JSON.parse(JSON.stringify(v)); } },
         end(score) { assert.strictEqual(ended, null, 'end() called twice'); assert.ok(typeof score === 'number' && isFinite(score), 'end(score): a number'); ended = score; },
         steering: () => steer, steerSource: () => opts.source, pedal: () => pedal, pedalSource: () => opts.source,
@@ -188,10 +189,11 @@ games.filter((g) => !only || g.id === only).forEach((g) => {
     });
     if (g.art) test(g.id + ': menu art draws', () => {
         const S = require(path.join(APP, 'style'));
-        for (let ms = 0; ms < 20000; ms += 333) g.art(fakeCanvas(), 100, 100, 184, 184, S, ms);
+        for (let ms = 0; ms < 20000; ms += 333) ['night', 'real'].forEach((l) => g.art(fakeCanvas(), 100, 100, 184, 184, S, ms, { look: l, texture: (f) => TX.load(path.join(APP, 'games', g.id, f)) }));
     });
-    ['knob', 'wheel'].forEach((source) => test(g.id + ': plays 3 minutes headless (' + source + ')', () => {
-        const r = play(g, { ms: 180000, seed: 7, source });
+    [['knob', 'night'], ['wheel', 'night'], ['wheel', 'real']].forEach((sl) => test(g.id + ': plays 3 minutes headless (' + sl[0] + ', ' + sl[1] + ' look)', () => {
+        const source = sl[0];
+        const r = play(g, { ms: 180000, seed: 7, source, look: sl[1] });
         assert.ok(r.frames > 10);
     }));
 });

@@ -23,6 +23,7 @@
 /* ---------- palette ---------- */
 const P = {
     bg0: '#05070d', bg1: '#0b1020', bg2: '#121a30',          // backdrop: top, bottom, raised
+    panel0: '#182038', panel1: '#0d1222',                     // a panel's gradient
     glass: [150, 180, 255, 14], glassHi: [190, 210, 255, 34], hair: [170, 195, 255, 30],
     ink: '#eef2fb', dim: '#8892aa', faint: '#4a5470', shade: [0, 0, 0, 140],
     good: '#4ef0a0', warn: '#ffc547', bad: '#ff4766', gold: '#ffd666', cold: '#4fc3ff',
@@ -33,6 +34,27 @@ const G = {
     'rev-keeper': '#ff5a3c', 'brick-breaker': '#ff4fa8', 'block-drop': '#6ff59a',
 };
 const hue = (id) => G[id] || P.cold;
+
+/* ---------- looks: 'night' (Night Circuit, the default above) or 'real' (realistic: graphite, white type, little glow) ---------- */
+const LOOKS = {
+    night: { P: Object.assign({}, P), G: Object.assign({}, G), glow: 1, grid: true },
+    real: {
+        P: Object.assign({}, P, { bg0: '#08090b', bg1: '#15171b', bg2: '#1d2025', panel0: '#202328', panel1: '#121418', glass: [255, 255, 255, 10], glassHi: [255, 255, 255, 40], hair: [255, 255, 255, 26],
+            ink: '#f4f6f9', dim: '#9aa1ac', faint: '#59606b', cold: '#3f8cff' }),
+        G: { 'lane-runner': '#3f8cff', 'paddle-duel': '#8c7cf0', 'canyon-glide': '#f0a040', 'rev-keeper': '#f05a3a', 'brick-breaker': '#e8508e', 'block-drop': '#4cc986' },
+        glow: 0.3, grid: false,
+    },
+};
+let LOOK = 'night', GLOW = 1, GRID = true;
+/** Switch the whole look (the shell does it from its "Game look" setting); games read P, G and hue() after. */
+function setLook(name) {
+    const L = LOOKS[name] || LOOKS.night;
+    if (LOOK === name) return;
+    LOOK = LOOKS[name] ? name : 'night';
+    Object.assign(P, L.P); Object.assign(G, L.G);
+    GLOW = L.glow; GRID = L.grid;
+}
+const look = () => LOOK;
 
 /* ---------- type scale (sizes that have every letter baked; num 64+ has digits only) ---------- */
 const T = {
@@ -75,7 +97,7 @@ function backdrop(cv, x, y, w, h, opts) {
     cv.gradientRect(x, y, w, h, [[0, P.bg0], [1, P.bg1]]);
     const tint = opts.tint;
     if (tint) cv.gradientRect(x, y + h * 0.45, w, h * 0.55, [[0, a(tint, 0)], [1, a(tint, 0.10 * (opts.horizon == null ? 1 : opts.horizon))]]);
-    const g = opts.grid == null ? 64 : opts.grid;
+    const g = !GRID ? 0 : opts.grid == null ? 64 : opts.grid;
     if (g > 0) {
         const sx = ((opts.sx || 0) % g + g) % g, sy = ((opts.sy || 0) % g + g) % g;
         const lc = [160, 190, 255, 9];
@@ -98,7 +120,7 @@ function panel(cv, x, y, w, h, opts) {
     const r = opts.r == null ? 16 : opts.r;
     cv.roundRect(x + 2, y + 8, w, h, r + 2, [0, 0, 0, 90]);
     if (opts.glow && opts.accent) glowRect(cv, x, y, w, h, r, opts.accent, opts.glow);
-    cv.card(x, y, w, h, r, opts.fill || [[0, '#182038'], [1, '#0d1222']]);
+    cv.card(x, y, w, h, r, opts.fill || [[0, P.panel0], [1, P.panel1]]);
     cv.strokeRoundRect(x, y, w, h, r, 1.5, opts.accent && opts.glow ? a(opts.accent, 0.5 + 0.5 * opts.glow) : P.hair);
     cv.fillRect(x + r, y + 1, w - 2 * r, 1, P.glassHi);
     if (opts.accent && opts.bar !== false) cv.roundRect(x + r, y, Math.min(w - 2 * r, opts.barW || 64), 4, 2, opts.accent);
@@ -107,7 +129,7 @@ function panel(cv, x, y, w, h, opts) {
 /* ---------- light ---------- */
 /** A soft glow around a rounded rect (stacked, widening, fading outlines) */
 function glowRect(cv, x, y, w, h, r, c, k) {
-    k = k == null ? 1 : k;
+    k = (k == null ? 1 : k) * GLOW;
     const L = [[18, 0.05], [12, 0.08], [7, 0.12], [3, 0.2]];
     for (const l of L) cv.roundRect(x - l[0], y - l[0], w + 2 * l[0], h + 2 * l[0], r + l[0], a(c, l[1] * k));
 }
@@ -275,6 +297,7 @@ class Shake {
 function flash(cv, x, y, w, h, c, k) { if (k > 0) cv.fillRect(x, y, w, h, a(c, 0.35 * k)); }
 
 module.exports = {
+    setLook, look,
     P, G, T, hue, rgb, a, mix, lighten, darken, ease, approach, clamp01,
     backdrop, vignette, panel, halo, beam, glowRect, glowCircle, glowLine, block,
     label, stat, chip, meter, countdown, flash, Particles, Popups, Shake,

@@ -86,6 +86,22 @@
       ]
     },
     {
+      "key": "look",
+      "label": "Game look",
+      "type": "choice",
+      "default": "real",
+      "options": [
+        [
+          "real",
+          "Realistic"
+        ],
+        [
+          "night",
+          "Night Circuit"
+        ]
+      ]
+    },
+    {
       "key": "theme",
       "label": "Colour theme",
       "type": "choice",

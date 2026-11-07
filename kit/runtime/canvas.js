@@ -64,16 +64,25 @@ class Canvas {
 
     /** Draw an opaque RGBA image (sw x sh bytes) scaled into x, y, w, h, nearest pixel. */
     drawImage(src, sw, sh, x, y, w, h) {
-        const x0 = Math.max(0, Math.round(x)), y0 = Math.max(0, Math.round(y));
-        const x1 = Math.min(this.w, Math.round(x + w)), y1 = Math.min(this.h, Math.round(y + h));
+        // bilinear, alpha-blended (straight RGBA source), as the GPU draws a filtered picture
+        const x0 = Math.max(0, Math.floor(x)), y0 = Math.max(0, Math.floor(y));
+        const x1 = Math.min(this.w, Math.ceil(x + w)), y1 = Math.min(this.h, Math.ceil(y + h));
         if (x1 <= x0 || y1 <= y0) return this;
         const d = this.d, fx = sw / w, fy = sh / h;
         for (let py = y0; py < y1; py++) {
-            const sy = Math.min(sh - 1, ((py - y + 0.5) * fy) | 0) * sw;
+            const syf = Math.max(0, Math.min(sh - 1, (py - y + 0.5) * fy - 0.5)), sy0 = syf | 0, sy1 = Math.min(sh - 1, sy0 + 1), ty = syf - sy0;
             let di = (py * this.w + x0) * 4;
             for (let px = x0; px < x1; px++, di += 4) {
-                const si = (sy + Math.min(sw - 1, ((px - x + 0.5) * fx) | 0)) * 4;
-                d[di] = src[si]; d[di + 1] = src[si + 1]; d[di + 2] = src[si + 2]; d[di + 3] = 255;
+                const sxf = Math.max(0, Math.min(sw - 1, (px - x + 0.5) * fx - 0.5)), sx0 = sxf | 0, sx1 = Math.min(sw - 1, sx0 + 1), tx = sxf - sx0;
+                const a = (sy0 * sw + sx0) * 4, b = (sy0 * sw + sx1) * 4, c = (sy1 * sw + sx0) * 4, e = (sy1 * sw + sx1) * 4;
+                const wa = (1 - tx) * (1 - ty), wb = tx * (1 - ty), wc = (1 - tx) * ty, we = tx * ty;
+                const al = (src[a + 3] * wa + src[b + 3] * wb + src[c + 3] * wc + src[e + 3] * we) / 255;
+                if (al <= 0) continue;
+                for (let k = 0; k < 3; k++) {
+                    const v = (src[a + k] * src[a + 3] * wa + src[b + k] * src[b + 3] * wb + src[c + k] * src[c + 3] * wc + src[e + k] * src[e + 3] * we) / 255;
+                    d[di + k] = Math.round(v + d[di + k] * (1 - al));
+                }
+                d[di + 3] = Math.round(255 * (al + (d[di + 3] / 255) * (1 - al)));
             }
         }
         return this;

@@ -23,6 +23,8 @@ const { Vehicle } = require('./vehicle');
 const { Controller } = require('./controls');
 const { load, Scores, Store } = require('./registry');
 const S = require('./style');
+const record = require('./kit/record');
+const { Textures } = require('./textures');
 
 const W = 1600, H = 520;
 const SLOTS = 10;                                     // games on the menu (two rows of tiles)
@@ -44,6 +46,9 @@ mgu.run({
         log.info('games: ' + (games.map((g) => g.id).join(', ') || 'none'));
         const scores = new Scores(path.join(ctx.dataDir, 'scores.json'));
         const store = new Store(path.join(ctx.dataDir, 'game-data.json'));
+        const textures = new Textures(record, log);
+        const look = () => { const l = settings.get('look') === 'night' ? 'night' : 'real'; S.setLook(l); return l; };
+        const texture = (g, file) => textures.load(path.join(__dirname, 'games', g.id, file));
 
         /* ---------- the car ---------- */
         const parked = Parked.watch(ctx, log);
@@ -85,7 +90,7 @@ mgu.run({
                     warn: (...a) => log.warn.apply(null, [g.id + ':'].concat(a)),
                     error: (...a) => log.error.apply(null, [g.id + ':'].concat(a)),
                 },
-                now: mono, random: Math.random, theme: ctx.theme, style: S,
+                now: mono, random: Math.random, theme: ctx.theme, style: S, texture: (file) => texture(g, file), look: () => look(),
                 best: () => scores.best(g.id), top: () => scores.top(g.id),
                 store: store.forGame(g.id),
                 end(score) {
@@ -198,6 +203,7 @@ mgu.run({
             S.chip(cv, st.pedal ? 'Pedal ready' : 'Pedal: ' + st.why.pedal, x, y, st.pedal ? S.P.good : S.P.dim, { size: 15 });
         }
         function drawMenu() {
+            look();
             const t = ctx.theme(), st = state(), now = mono(), dt = Math.min(50, now - lastMenu);
             lastMenu = now;
             const cv = ctx.canvas(W, H).clear(S.P.bg0);
@@ -221,7 +227,7 @@ mgu.run({
                 const aw = Math.round(th * 1.0), ax = x + 8, ay = y + 8, ah = th - 16;
                 cv.clip(ax, ay, aw, ah);
                 cv.card(ax, ay, aw, ah, 12, [[0, S.mix(hue, S.P.bg1, 0.82)], [1, S.mix(hue, S.P.bg0, 0.93)]]);
-                try { if (typeof g.art === 'function') g.art(cv, ax, ay, aw, ah, S, now - menuT0); else S.glowCircle(cv, ax + aw / 2, ay + ah / 2, ah * 0.18, hue); } catch (e) { /* art is decoration */ }
+                try { if (typeof g.art === 'function') g.art(cv, ax, ay, aw, ah, S, now - menuT0, { look: look(), texture: (file) => texture(g, file) }); else S.glowCircle(cv, ax + aw / 2, ay + ah / 2, ah * 0.18, hue); } catch (e) { /* art is decoration */ }
                 cv.noclip();
                 cv.strokeRoundRect(ax, ay, aw, ah, 12, 1, S.a(hue, 0.25 + 0.35 * k));
                 // the words, right of the art
@@ -266,6 +272,7 @@ mgu.run({
         let lastT = mono();
         function render() {
             if (mode !== 'game' || !cur) return drawMenu();
+            look();
             const t = ctx.theme();
             const cv = ctx.canvas(W, H).clear(S.P.bg0);
             G.frame(cv, t, tabs(), 1);         // the header's tabs (full-screen layout: drawn in the header, not on the page)

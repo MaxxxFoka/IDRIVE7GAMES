@@ -5,6 +5,7 @@
  * Rules: logic.js. This file draws, in the shell's look (api.style): a neon highway at night.
  */
 const { Run, ROAD, LANES, LANE_H, CAR, STEER_RANGE, LIVES } = require('./logic');
+const { Real, artReal } = require('./real');
 
 const W = 1600, H = 520;
 const HUE = '#38d9ff';
@@ -27,6 +28,9 @@ class Game {
         this.nextMark = 100;   // the next distance milestone (m)
         this.trail = [];       // the car's recent y, for the tail-light streaks
         this.fuelShown = 1;
+        // the realistic look (the shell's "Game look" setting) when its textures load
+        this.real = null;
+        if (api.look && api.look() === 'real') { const R = new Real(this); if (R.ok()) this.real = R; }
     }
 
     update(dt) {
@@ -43,27 +47,33 @@ class Game {
                 this.hitK = 1; this.shake.kick(16);
                 const o = r.things.filter((q) => q.gone && q.kind !== 'can').sort((a, b) => Math.abs(a.x - CAR.x) - Math.abs(b.x - CAR.x))[0];
                 const b = o ? r.box(o) : { x: CAR.x, y: r.y, w: 0, h: 0 };
-                this.fx.burst(b.x + b.w / 2, b.y + b.h / 2, o && o.kind === 'barrier' ? C.barrier : C.cone, 40, { speed: 700, life: 700, drag: 3 });
-                this.fx.burst(CAR.x + CAR.w / 2, r.y, '#ffffff', 14, { speed: 500, life: 350 });
-                this.pops.add(r.lives > 0 ? r.lives + ' left' : 'Crash', CAR.x + 40, r.y - 40, S.P.bad, { size: 28 });
+                if (this.real) {
+                    this.fx.burst(b.x + b.w / 2, b.y + b.h / 2, o && o.kind === 'barrier' ? '#c9c6bd' : '#ff7a1c', 34, { speed: 600, life: 650, drag: 3.5, size: 3.5 });
+                    this.fx.burst(CAR.x + CAR.w / 2, r.y, '#8d8a84', 22, { speed: 260, life: 900, drag: 2, size: 5 });
+                } else {
+                    this.fx.burst(b.x + b.w / 2, b.y + b.h / 2, o && o.kind === 'barrier' ? C.barrier : C.cone, 40, { speed: 700, life: 700, drag: 3 });
+                    this.fx.burst(CAR.x + CAR.w / 2, r.y, '#ffffff', 14, { speed: 500, life: 350 });
+                }
+                this.pops.add(r.lives > 0 ? r.lives + ' left' : 'Crash', CAR.x + 40, r.y - 40, this.real ? '#ffffff' : S.P.bad, { size: 28 });
             } else if (e === 'can') {
                 this.canK = 1; this.shake.kick(4);
-                this.fx.burst(CAR.x + CAR.w / 2, r.y, C.can, 28, { speed: 420, life: 650 });
-                this.pops.add('Fuel', CAR.x + 60, r.y - 36, C.can, { size: 28 });
+                this.fx.burst(CAR.x + CAR.w / 2, r.y, this.real ? '#ffe08a' : C.can, 28, { speed: 420, life: 650 });
+                this.pops.add('Fuel', CAR.x + 60, r.y - 36, this.real ? '#ffe08a' : C.can, { size: 28 });
             } else if (e === 'over') { this.api.end(r.metres()); }
         });
         if (r.metres() >= this.nextMark) {
-            this.pops.add(String(this.nextMark), 420, ROAD.top + 70, HUE, { size: 56, life: 1100 });
+            this.pops.add(String(this.nextMark), 420, ROAD.top + 70, this.real ? '#ffffff' : HUE, { size: 56, life: 1100 });
             this.nextMark += this.nextMark < 1000 ? 100 : 500;
         }
         // exhaust / speed sparks off the rear
-        if (!r.over && Math.random() < r.speed / 2200) this.fx.burst(CAR.x - CAR.w / 2, r.y + (Math.random() - 0.5) * 30, HUE, 1, { dir: 180, spread: 10, speed: r.speed * 0.5, life: 260, size: 2 });
+        if (!r.over && !this.real && Math.random() < r.speed / 2200) this.fx.burst(CAR.x - CAR.w / 2, r.y + (Math.random() - 0.5) * 30, HUE, 1, { dir: 180, spread: 10, speed: r.speed * 0.5, life: 260, size: 2 });
         this.fx.update(dt); this.pops.update(dt); this.shake.update(dt);
     }
 
     input() { /* the steering comes from api.steering(); the shell turns the knob into it where needed */ }
 
     draw(cv) {
+        if (this.real) { this.real.draw(cv); return; }
         const r = this.run, S = this.S, ox = this.shake.x, oy = this.shake.y;
         const speedK = Math.min(1, (r.speed - 520) / 980);
         this.verge(cv, ox);
@@ -209,7 +219,8 @@ class Game {
 }
 
 /** The menu tile's little scene: the car on a neon road between cones */
-function art(cv, x, y, w, h, S, ms) {
+function art(cv, x, y, w, h, S, ms, opts) {
+    if (opts && opts.look === 'real' && opts.texture && artReal(cv, x, y, w, h, S, ms, opts.texture)) return;
     const mid = y + h / 2, top = mid - 46, bot = mid + 46;
     cv.fillRect(x, top, w, bot - top, '#0b1122');
     const ph = (ms * 0.12) % 60;
