@@ -42,7 +42,7 @@ class Game {
 module.exports = {
     id: 'rev-keeper',
     title: 'Rev Keeper',
-    blurb: 'Hold the needle in the moving green',
+    blurb: 'Rev into the moving green',
     order: 40,
     needs: ['pedal'],
     score: { unit: 'pts', lower: false },

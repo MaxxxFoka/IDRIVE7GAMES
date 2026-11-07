@@ -30,16 +30,16 @@ function draw(cv, g, view) {
 }
 
 function hud(cv, g, view) {
-    cv.text('REV KEEPER', 48, 62, 30, C.text, bold());
+    cv.text('REV KEEPER', 48, 72, 30, C.text, bold());
     const src = view.source === 'knob' ? 'KNOB (PEDAL STAND-IN)' : view.source === 'pedal' ? 'ACCELERATOR PEDAL' : 'NO INPUT';
-    cv.text(src, 48, 94, 20, view.source ? C.dim : C.warn, bold());
-    cv.text(String(Math.floor(g.score)), W / 2, 84, 64, C.text, num({ align: 'center' }));
-    if (view.best != null) cv.text('BEST ' + view.best, W / 2, 114, 20, C.dim, bold({ align: 'center' }));
+    cv.text(src, 48, 102, 20, view.source ? C.dim : C.warn, bold());
+    cv.text(String(Math.floor(g.score)), W / 2, 92, 64, C.text, num({ align: 'center' }));
+    if (view.best != null) cv.text('BEST ' + view.best, W / 2, 120, 20, C.dim, bold({ align: 'center' }));
     const m = g.mult, mc = m >= 6 ? C.zoneHot : m >= 3 ? C.zone : C.text;
-    cv.text('x' + m, W - 250, 84, 40, g.state === 'play' ? mc : C.dim, bold({ align: 'right' }));
-    if (g.lost > 0 && g.state === 'play') cv.text('MULTIPLIER LOST', W - 250, 114, 18, A(C.red, clamp01(g.lost)), bold({ align: 'right' }));
-    cv.text('LEVEL', W - 48, 50, 20, C.dim, bold({ align: 'right' }));
-    cv.text(String(g.level), W - 48, 88, 40, C.text, num({ align: 'right' }));
+    cv.text('x' + m, W - 250, 92, 40, g.state === 'play' ? mc : C.dim, bold({ align: 'right' }));
+    if (g.lost > 0 && g.state === 'play') cv.text('MULTIPLIER LOST', W - 250, 120, 18, A(C.red, clamp01(g.lost)), bold({ align: 'right' }));
+    cv.text('LEVEL', W - 48, 64, 20, C.dim, bold({ align: 'right' }));
+    cv.text(String(g.level), W - 48, 100, 40, C.text, num({ align: 'right' }));
 }
 
 function gauge(cv, g) {
