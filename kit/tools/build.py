@@ -452,6 +452,10 @@ def build(app_id, language='en', preview_only=False):
         elif f.endswith(('.wasm', '.wad')) or f in ('LICENSE', 'NOTICE'):
             # files the app reads as they are (doom: the game as WebAssembly, its data, its licences)
             shutil.copy(os.path.join(adir, f), os.path.join(src, 'javascript', f))
+        elif f == 'games' and os.path.isdir(os.path.join(adir, f)):
+            # Parked Games: every game's folder goes along as it is (games/<id>/index.js, loaded at start)
+            shutil.copytree(os.path.join(adir, f), os.path.join(src, 'javascript', f),
+                            ignore=shutil.ignore_patterns('test*.js', '*.md', '__pycache__'))
         elif os.path.isdir(os.path.join(adir, f)):
             # data folders go along as one compressed file, read with kit/runtime/pack.js
             # (e.g. dtc_scanner/dtc_db, the fault text database -> dtc_db.pack)

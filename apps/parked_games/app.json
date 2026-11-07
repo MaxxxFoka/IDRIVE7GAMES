@@ -1,0 +1,128 @@
+{
+  "id": "parked_games",
+  "title": "Parked Games",
+  "description": "Small games for when the car is parked: the knob, the touchscreen, and in P with the parking brake on also the steering wheel and pedal",
+  "version": "0.1.0",
+  "vendor": "custom",
+  "loggingId": "OAB1",
+  "iconGlyph": "PG",
+  "signals": {
+    "de.bmw.infotainment.vehicle.Vehicle2": {
+      "statusCarSpeed2": "rs"
+    },
+    "de.bmw.infotainment.vehicle.CDS": {
+      "statusEngineSpeed2": "rs",
+      "statusHandBrake": "rs",
+      "statusEngineStatus": "rs"
+    },
+    "de.bmw.infrastructure.VehicleInformation": {
+      "statusGearboxDrive": "s",
+      "DataPowerTrain2": "s"
+    },
+    "de.bmw.chassis.SteeringAngle": {
+      "_optional": "the steering wheel as a controller (the knob steers instead)",
+      "ActualSteeringAngleDriver": "s",
+      "actualSteeringAngleDriverNoCRC": "s"
+    },
+    "de.bmw.powertrain.AcceleratorPedal": {
+      "_optional": "the accelerator pedal as a controller (the knob stands in)",
+      "AngleAcceleratorPedal": "s"
+    },
+    "de.bmw.infotainment.controlelements.FrontCCU": {
+      "statusRotaryEncoderState": "rs"
+    }
+  },
+  "screens": [
+    {
+      "name": "MAIN",
+      "kind": "canvas",
+      "title": "Parked Games",
+      "buttons": [
+        [
+          "BTN_PLAY",
+          "Play"
+        ],
+        [
+          "BTN_SETTINGS",
+          "Settings"
+        ]
+      ]
+    },
+    {
+      "name": "GAME",
+      "kind": "canvas",
+      "title": "Parked Games",
+      "bar": false,
+      "buttons": [
+        [
+          "BTN_AGAIN",
+          "Play"
+        ]
+      ]
+    }
+  ],
+  "settings": [
+    {
+      "key": "parkedOnly",
+      "label": "Parked only (pauses while driving)",
+      "type": "bool",
+      "default": true
+    },
+    {
+      "key": "wheel",
+      "label": "Steering wheel and pedal",
+      "type": "choice",
+      "default": "auto",
+      "options": [
+        [
+          "auto",
+          "In P with the parking brake on"
+        ],
+        [
+          "off",
+          "Off (the knob only)"
+        ]
+      ]
+    },
+    {
+      "key": "steerDir",
+      "label": "Steering direction",
+      "type": "choice",
+      "default": "normal",
+      "options": [
+        [
+          "normal",
+          "Normal"
+        ],
+        [
+          "reversed",
+          "Reversed"
+        ]
+      ]
+    },
+    {
+      "key": "theme",
+      "label": "Colour theme",
+      "type": "choice",
+      "default": "m_tricolour",
+      "options": [
+        [
+          "m_red",
+          "M Red"
+        ],
+        [
+          "m_tricolour",
+          "M Tricolour"
+        ],
+        [
+          "ice",
+          "Ice White"
+        ],
+        [
+          "amber",
+          "Night Amber"
+        ]
+      ]
+    }
+  ]
+}
