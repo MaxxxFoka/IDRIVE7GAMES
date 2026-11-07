@@ -44,10 +44,10 @@ function create(api) {
     api = api || {};
     const cols = 10, rows = 12;
     const wellW = cols * CELL, wellH = rows * CELL;
-    const WX = Math.round((W - wellW) / 2), WY = Math.round((H - wellH) / 2);
+    const WX = Math.round((W - wellW) / 2), WY = 52;                    // the shell keeps y 0..44 for its own frame
 
     // touch buttons: [id, x, y, w, h, label]
-    const BTN_W = 200, BTN_H = 150, BTN_Y = H - 24 - BTN_H;
+    const BTN_W = 200, BTN_H = 150, BTN_Y = 512 - BTN_H;
     const buttons = [
         ['rotate', WX - 40 - 2 * BTN_W - 20, BTN_Y, BTN_W, BTN_H, 'Rotate'],
         ['left', WX - 40 - BTN_W, BTN_Y, BTN_W, BTN_H, 'Left'],
@@ -221,26 +221,26 @@ function create(api) {
         for (const k of ['panelTop', 'panelEdge', 'track', 'accent2', 'text', 'dim', 'crit']) if (typeof t[k] !== 'string') t[k] = DEFAULT_THEME[k];
 
         // left: score
-        const LX = 24, LW = WX - 40 - LX;
-        panel(cv, t, LX, 24, LW, BTN_Y - 24 - 20);
-        cv.text('BLOCK DROP', LX + 28, 66, 26, t.accent2, { font: 'bold', spacing: 3 });
-        cv.text('SCORE', LX + 28, 112, 20, t.dim, { font: 'bold', spacing: 2 });
-        cv.text(String(eng.score), LX + 28, 176, 64, t.text, { font: 'num', literal: true });
-        cv.text('LEVEL', LX + 28, 222, 20, t.dim, { font: 'bold', spacing: 2 });
-        cv.text(String(eng.level), LX + 28, 262, 40, t.text, { font: 'num', literal: true });
-        cv.text('BEST', LX + 200, 222, 20, t.dim, { font: 'bold', spacing: 2 });
-        cv.text(String(Math.max(best, eng.score)), LX + 200, 262, 40, eng.score > best ? PALETTE[3] : t.text, { font: 'num', literal: true });
-        cv.text('ROWS ' + eng.lines + '   BURSTS ' + eng.bursts, LX + 28, 300, 18, t.dim, { font: 'bold', spacing: 1, literal: true });
+        const LX = 16, LW = WX - 40 - LX;
+        panel(cv, t, LX, 48, LW, BTN_Y - 48 - 14);
+        cv.text('BLOCK DROP', LX + 28, 84, 26, t.accent2, { font: 'bold', spacing: 3 });
+        cv.text('SCORE', LX + 28, 124, 20, t.dim, { font: 'bold', spacing: 2 });
+        cv.text(String(eng.score), LX + 28, 186, 64, t.text, { font: 'num', literal: true });
+        cv.text('LEVEL', LX + 28, 230, 20, t.dim, { font: 'bold', spacing: 2 });
+        cv.text(String(eng.level), LX + 28, 270, 40, t.text, { font: 'num', literal: true });
+        cv.text('BEST', LX + 200, 230, 20, t.dim, { font: 'bold', spacing: 2 });
+        cv.text(String(Math.max(best, eng.score)), LX + 200, 270, 40, eng.score > best ? PALETTE[3] : t.text, { font: 'num', literal: true });
+        cv.text('ROWS ' + eng.lines + '   BURSTS ' + eng.bursts, LX + 28, 316, 18, t.dim, { font: 'bold', spacing: 1, literal: true });
 
         // right: next shard + the rules in one line each
-        const RX = WX + wellW + 40, RW = W - 24 - RX;
-        panel(cv, t, RX, 24, RW, BTN_Y - 24 - 20);
-        cv.text('NEXT', RX + 28, 66, 20, t.dim, { font: 'bold', spacing: 2 });
-        cv.roundRect(RX + 24, 82, 150, 110, 10, '#000000');
-        drawShard(cv, eng.next.kind, eng.next.colours, RX + 24 + 75, 82 + 55, 34);
+        const RX = WX + wellW + 40, RW = W - 16 - RX;
+        panel(cv, t, RX, 48, RW, BTN_Y - 48 - 14);
+        cv.text('NEXT', RX + 28, 84, 20, t.dim, { font: 'bold', spacing: 2 });
+        cv.roundRect(RX + 24, 98, 150, 110, 10, '#000000');
+        drawShard(cv, eng.next.kind, eng.next.colours, RX + 24 + 75, 98 + 55, 34);
         const tips = ['Fill a row to clear it', 'Join 4 of one colour: burst', 'Spark wipes the colour below', 'Tap the well: swap colours'];
-        tips.forEach((s, i) => cv.text(s, RX + 196, 92 + i * 30, 19, t.dim, { literal: false }));
-        cv.text('Knob: turn move, press rotate, up swap, down drop', RX + 28, 296, 17, t.dim, {});
+        tips.forEach((s, i) => cv.text(s, RX + 196, 110 + i * 30, 19, t.dim, { literal: false }));
+        cv.text('Knob: turn move, press rotate, up swap, down drop', RX + 28, 318, 17, t.dim, {});
 
         drawWell(cv, t);
         drawButtons(cv, t);
@@ -251,7 +251,7 @@ function create(api) {
         shown.forEach((f, i) => {
             const a = Math.min(1, 2 * (1 - (now - f.t) / 1600));
             const older = shown.length > 1 && i === 0;      // the one before: smaller, above
-            cv.text(f.text, RX + 28, older ? 220 : 264, older ? 26 : 36, alpha(f.colour, a), { font: 'bold', literal: true });
+            cv.text(f.text, RX + 28, older ? 240 : 284, older ? 26 : 36, alpha(f.colour, a), { font: 'bold', literal: true });
         });
 
         // the shell shows the result card after end(); here the well only dims
@@ -277,7 +277,7 @@ function create(api) {
 module.exports = {
     id: 'block-drop',
     title: 'Block Drop',
-    blurb: 'Fill a row or join 4 of a colour',
+    blurb: 'Rows or 4 of a colour clear',
     order: 70,
     needs: [],
     score: { unit: 'pts', lower: false },

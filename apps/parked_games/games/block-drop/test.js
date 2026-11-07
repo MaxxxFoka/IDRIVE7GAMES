@@ -160,7 +160,7 @@ function fakeApi(over) {
 test('index: module fields match GAMES.md', () => {
     assert.strictEqual(BD.id, 'block-drop');
     assert.ok(typeof BD.title === 'string' && BD.title.length <= 18);
-    assert.ok(typeof BD.blurb === 'string' && BD.blurb.length <= 40);
+    assert.ok(typeof BD.blurb === 'string' && BD.blurb.length <= 28);
     assert.ok(Array.isArray(BD.needs) && typeof BD.order === 'number');
     assert.strictEqual(BD.score.lower, false);
 });
