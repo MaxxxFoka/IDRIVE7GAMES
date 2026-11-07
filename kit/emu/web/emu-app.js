@@ -350,9 +350,10 @@ function syncSettings() {
 const SIG = [
   ['rpm', 'Engine', 0, 9000, 50, 'rpm'], ['speed', 'Speed', 0, 320, 1, 'km/h'], ['coolant', 'Coolant', -20, 130, 1, '°C'], ['oil', 'Oil', -20, 150, 1, '°C'],
   ['torque', 'Torque', 0, 900, 5, 'Nm'], ['gLong', 'g long', -1.5, 1.5, 0.01, 'g'], ['gLat', 'g lat', -1.5, 1.5, 0.01, 'g'],
+  ['steer', 'Steering', -180, 180, 1, '° (+ right)'], ['pedal', 'Pedal', 0, 100, 1, '%'], ['handbrake', 'Parking brake', 0, 1, 1, '(1 = on)'],
 ];
 const GEARS = ['P', 'R', 'N', 'D1', 'D2', 'D3', 'D4', 'D5', 'D6', 'D7', 'D8'];
-const sig = { mode: 'demo', v: { rpm: 900, speed: 0, coolant: 90, oil: 95, gear: 'P', gLong: 0, gLat: 0, torque: 40 } };
+const sig = { mode: 'demo', v: { rpm: 900, speed: 0, coolant: 90, oil: 95, gear: 'P', gLong: 0, gLat: 0, torque: 40, steer: 0, pedal: 0, handbrake: 1 } };
 function buildSignals() {
   const box = $('#sliders');
   SIG.forEach(([k, label, min, max, step, unit]) => {

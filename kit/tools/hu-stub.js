@@ -362,6 +362,11 @@ function runLive(stage, dataDir) {
         hu.feed('de.bmw.infotainment.vehicle.CDS', 'statusEngineTemperature', { temperatureEngineDrive: raw('temp', v.coolant), temperatureEngineOilDrive: raw('temp', v.oil) });
         hu.feed('de.bmw.infrastructure.VehicleInformation', 'statusGearboxDrive', { statusActualGearDrive: gear, statusActualStageDrive: /^D/.test(v.gear) ? 'D' : v.gear });
         hu.feed('de.bmw.infotainment.drivingexcitement.FES', 'statusActualValueTorque2', { actualValueTorqueCrankshaft: raw('torque', v.torque) });
+        // steering wheel (slider + = right; the car's raw angle is + = left, 0.04395 deg per bit, signed 16 bit),
+        // accelerator pedal (0.025 % per bit) and parking brake: for the parked games
+        if (isFinite(v.steer)) hu.feed('de.bmw.chassis.SteeringAngle', 'ActualSteeringAngleDriver', { actualValueSteeringAngleDriver: (Math.round(-v.steer / 0.04395) + 65536) % 65536 });
+        if (isFinite(v.pedal)) hu.feed('de.bmw.powertrain.AcceleratorPedal', 'AngleAcceleratorPedal', { actualValueAngleAcceleratorPedal: Math.round(v.pedal / 0.025) });
+        if (isFinite(v.handbrake)) hu.feed('de.bmw.infotainment.vehicle.CDS', 'statusHandBrake', { statusContactHandBrake: v.handbrake ? 'HANDBREMSE_ANGEZOGEN' : 'HANDBREMSE_GELOEST' });
     }, 50);
 
     process.on('message', (m) => {
