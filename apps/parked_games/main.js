@@ -22,6 +22,7 @@ const G = require('./kit/gauges');
 const { Vehicle } = require('./vehicle');
 const { Controller } = require('./controls');
 const { load, Scores, Store } = require('./registry');
+const S = require('./style');
 
 const W = 1600, H = 520;
 const SLOTS = 10;                                     // games on the menu (two rows of tiles)
@@ -84,12 +85,12 @@ mgu.run({
                     warn: (...a) => log.warn.apply(null, [g.id + ':'].concat(a)),
                     error: (...a) => log.error.apply(null, [g.id + ':'].concat(a)),
                 },
-                now: mono, random: Math.random, theme: ctx.theme,
+                now: mono, random: Math.random, theme: ctx.theme, style: S,
                 best: () => scores.best(g.id), top: () => scores.top(g.id),
                 store: store.forGame(g.id),
                 end(score) {
                     if (cur !== round || round.phase === 'over') return;
-                    round.phase = 'over'; round.score = score;
+                    round.phase = 'over'; round.score = score; round.overAt = mono();
                     round.prevBest = scores.best(g.id);
                     round.place = scores.add(g, score);
                     log.info(g.id + ': round over, ' + fmt(g, score) + (round.place === 1 ? ' (new best)' : ''));
@@ -119,7 +120,7 @@ mgu.run({
         }
         function fail(round, e) {
             log.error(round.g.id + ' stopped', e);
-            round.err = e; round.phase = 'over'; round.game = null;
+            round.err = e; round.phase = 'over'; round.game = null; round.overAt = mono();
         }
         const call = (fn) => {
             const r = cur;
@@ -186,39 +187,63 @@ mgu.run({
             const p = st.pedal ? 'pedal ready' : 'pedal: ' + st.why.pedal;
             return w + '  ·  ' + p;
         }
-        const TAG = { wheel: 'WHEEL', pedal: 'PEDAL' };
+        const TAG = { wheel: 'Wheel', pedal: 'Pedal' };
+        const lift = {};          // per tile: 0..1, eased towards selected
+        let menuT0 = mono(), lastMenu = mono();
+        /** The car's state as two lit chips: what the wheel and the pedal do right now. */
+        function statusChips(cv, st, y) {
+            if (st.moving) { S.chip(cv, 'Parked only: the games wait while the car moves', 24, y, S.P.warn, { size: 15 }); return; }
+            let x = 24;
+            x += S.chip(cv, st.wheel ? 'Steering wheel ready' : 'Knob steers  (' + st.why.wheel + ')', x, y, st.wheel ? S.P.good : S.P.dim, { size: 15 }) + 10;
+            S.chip(cv, st.pedal ? 'Pedal ready' : 'Pedal: ' + st.why.pedal, x, y, st.pedal ? S.P.good : S.P.dim, { size: 15 });
+        }
         function drawMenu() {
-            const t = ctx.theme(), st = state();
-            const cv = ctx.canvas(W, H).clear(t.bg);
+            const t = ctx.theme(), st = state(), now = mono(), dt = Math.min(50, now - lastMenu);
+            lastMenu = now;
+            const cv = ctx.canvas(W, H).clear(S.P.bg0);
             G.frame(cv, t, tabs(), 0);
-            const top = G.TOP + 12, bottom = G.pageBottom(cv) - 8;
-            cv.text(status(st), 24, top + 22, 22, st.moving ? (t.warn || t.text) : t.dim, { font: 'label' });
-            if (!games.length) { cv.text('No games installed', W / 2, (top + bottom) / 2, 32, t.dim, { align: 'center', font: 'bold' }); return ui.image('MAIN_GFX', cv); }
-            const n = Math.min(games.length, SLOTS), cols = n <= 8 ? 4 : 5, rows = Math.ceil(n / cols);
-            const gx = 24, gy = top + 40, gap = 16;
+            const top = G.TOP, bottom = G.pageBottom(cv) - 8;
+            const selHue = games[sel] ? S.hue(games[sel].id) : S.P.cold;
+            S.backdrop(cv, 0, top, W, H - top, { tint: selHue, grid: 48, sx: (now - menuT0) * 0.012, horizon: 1 });
+            statusChips(cv, st, top + 10);
+            if (!games.length) { cv.text('No games installed', W / 2, (top + bottom) / 2, 32, S.P.dim, { align: 'center', font: 'bold' }); return ui.image('MAIN_GFX', cv); }
+            const n = Math.min(games.length, SLOTS), cols = n <= 6 ? 3 : n <= 8 ? 4 : 5, rows = Math.ceil(n / cols);
+            const gx = 24, gy = top + 52, gap = 18;
             const tw = (W - 2 * gx - gap * (cols - 1)) / cols, th = Math.min(200, (bottom - gy - gap * (rows - 1)) / rows);
             games.slice(0, SLOTS).forEach((g, i) => {
-                const x = gx + (i % cols) * (tw + gap), y = gy + Math.floor(i / cols) * (th + gap);
+                const hue = S.hue(g.id), on = i === sel;
+                lift[g.id] = S.approach(lift[g.id] || 0, on ? 1 : 0, dt, 0.55);
+                const k = lift[g.id];
+                const x = gx + (i % cols) * (tw + gap), y = gy + Math.floor(i / cols) * (th + gap) - 4 * k;
                 const going = cur && cur.g === g && cur.phase === 'paused';
-                cv.roundRect(x, y, tw, th, 14, t.panel || '#1a1d22');
-                if (i === sel) cv.strokeRoundRect(x, y, tw, th, 14, 2, t.dim);
-                cv.clip(x, y, tw - 8, th);
-                cv.text(g.title, x + 20, y + 44, 30, st.moving ? t.dim : t.text, { font: 'bold' });
-                if (g.blurb) cv.text(g.blurb, x + 20, y + 76, 20, t.dim, { font: 'label' });
+                S.panel(cv, x, y, tw, th, { r: 18, accent: hue, glow: k * (0.75 + 0.25 * S.ease.pulse(now, 1600)), bar: false });
+                // the art: the game's own little scene, in its hue, on the left
+                const aw = Math.round(th * 1.0), ax = x + 8, ay = y + 8, ah = th - 16;
+                cv.clip(ax, ay, aw, ah);
+                cv.card(ax, ay, aw, ah, 12, [[0, S.mix(hue, S.P.bg1, 0.82)], [1, S.mix(hue, S.P.bg0, 0.93)]]);
+                try { if (typeof g.art === 'function') g.art(cv, ax, ay, aw, ah, S, now - menuT0); else S.glowCircle(cv, ax + aw / 2, ay + ah / 2, ah * 0.18, hue); } catch (e) { /* art is decoration */ }
+                cv.noclip();
+                cv.strokeRoundRect(ax, ay, aw, ah, 12, 1, S.a(hue, 0.25 + 0.35 * k));
+                // the words, right of the art
+                const tx = ax + aw + 22, tr = x + tw - 18;
+                cv.clip(tx, y, tr - tx, th);
+                cv.text(g.title, tx, y + 50, 30, st.moving ? S.P.dim : S.P.ink, { font: 'bold' });
+                if (g.blurb) cv.text(g.blurb, tx, y + 80, 18, S.P.dim, { font: 'label' });
                 cv.noclip();
                 const b = scores.best(g.id);
-                cv.text(b === null ? 'no score yet' : 'best ' + fmt(g, b), x + 20, y + th - 22, 22, b === null ? t.dim : t.accent, { font: 'bold' });
-                const tags = (g.needs || []).map((k) => TAG[k]).filter(Boolean).concat(going ? ['PAUSED'] : []);
-                let tx = x + tw - 16;
-                tags.reverse().forEach((s) => {
-                    const w = cv.textWidth(s, 15, { font: 'bold' }) + 18;
-                    tx -= w;
-                    cv.roundRect(tx, y + 16, w, 26, 8, s === 'PAUSED' ? t.accent : [255, 255, 255, 28]);
-                    cv.text(s, tx + w / 2, y + 35, 15, s === 'PAUSED' ? t.bg : t.dim, { font: 'bold', align: 'center' });
-                    tx -= 8;
-                });
-                cv.target(x, y, tw, th, () => open(g), g.id, 14);
+                if (b === null) S.label(cv, 'New', tx, y + th - 26, S.P.faint, { size: 15 });
+                else {
+                    S.label(cv, 'Best', tx, y + th - 56, S.P.dim, { size: 13 });
+                    cv.text(fmt(g, b), tx, y + th - 22, 30, hue, { font: 'bold' });
+                }
+                // inputs, bottom right
+                const tags = (g.needs || []).map((q) => TAG[q]).filter(Boolean);
+                let cx = tr;
+                if (going) cx -= S.chip(cv, 'Paused', cx, y + 16, S.P.gold, { align: 'right', solid: true, size: 13 }) + 8;
+                tags.reverse().forEach((s) => { cx -= S.chip(cv, s, cx, y + th - 46, S.P.dim, { align: 'right', size: 13 }) + 8; });
+                cv.target(x, y, tw, th, () => open(g), g.id, 18);
             });
+            S.vignette(cv, 0, top, W, H - top, 0.5);
             return ui.image('MAIN_GFX', cv);
         }
         if (games.length > SLOTS) log.warn('only the first ' + SLOTS + ' games fit the menu');
@@ -242,64 +267,102 @@ mgu.run({
         function render() {
             if (mode !== 'game' || !cur) return drawMenu();
             const t = ctx.theme();
-            const cv = ctx.canvas(W, H).clear(t.bg);
+            const cv = ctx.canvas(W, H).clear(S.P.bg0);
             G.frame(cv, t, tabs(), 1);         // the header's tabs (full-screen layout: drawn in the header, not on the page)
             const now = mono(), dt = Math.min(50, Math.max(0, now - lastT));
             lastT = now;
             if (cur.phase === 'play') call((gm) => gm.update(dt));
             call((gm) => gm.draw(cv));
             hint(cv, t);
-            if (cur.phase === 'paused') paused(cv, t);
-            else if (cur.phase === 'over') result(cv, t);
+            if (cur.phase === 'paused') { cur.pausedAt = cur.pausedAt || mono(); paused(cv, t); } else {
+                cur.pausedAt = 0;
+                if (cur.phase === 'over') result(cv, t);
+            }
             return ui.image('MAIN_GFX', cv);
         }
-        /** Where the wheel / pedal can't be used: one small line, bottom left. */
+        /** Where the wheel / pedal can't be used: one small chip, bottom left. */
         function hint(cv, t) {
             const g = cur.g, st = state();
             let s = null;
-            if (has(g, 'wheel') && !st.wheel) s = 'Knob steering (wheel: ' + st.why.wheel + ')';
-            else if (has(g, 'pedal') && !st.pedal) s = (has(g, 'wheel') ? 'Push up for the pedal' : 'Knob pedal') + ' (pedal: ' + st.why.pedal + ')';
-            if (s) cv.text(s, 16, H - 12, 18, t.dim, { font: 'label' });
+            if (has(g, 'wheel') && !st.wheel) s = 'Knob steers  (wheel: ' + st.why.wheel + ')';
+            else if (has(g, 'pedal') && !st.pedal) s = (has(g, 'wheel') ? 'Push up for the pedal' : 'Knob is the pedal') + '  (' + st.why.pedal + ')';
+            if (s) { cv.alpha(0.8); S.chip(cv, s, 16, H - 34, S.P.dim, { size: 12 }); cv.alpha(1); }
         }
-        function card(cv, t, w, h) {
-            cv.fillRect(0, 0, W, H, [0, 0, 0, 150]);
-            const x = (W - w) / 2, y = (H - h) / 2;
-            cv.roundRect(x, y, w, h, 18, t.panel || '#1a1d22');
-            cv.strokeRoundRect(x, y, w, h, 18, 2, t.accent);
-            return { x, y };
+        /** The card over a paused or ended round: the round dims and blurs back, the card springs in. */
+        function card(cv, w, h, since) {
+            const f = S.ease.out((mono() - since) / 260), sc = 0.94 + 0.06 * S.ease.back((mono() - since) / 320);
+            cv.fillRect(0, 0, W, H, [3, 5, 12, Math.round(185 * f)]);
+            const hue = S.hue(cur.g.id);
+            const cw = w * sc, ch = h * sc, x = (W - cw) / 2, y = (H - ch) / 2 + 18 + 20 * (1 - f);
+            cv.alpha(f);
+            S.panel(cv, x, y, cw, ch, { r: 22, accent: hue, glow: 0.6, barW: 96 });
+            return { x, y, w: cw, h: ch, hue, f };
+        }
+        /** "Press to ..." as a lit pill at the card's bottom */
+        function prompt(cv, p, s) {
+            const k = 0.65 + 0.35 * S.ease.pulse(mono(), 1400);
+            cv.alpha(p.f * k);
+            S.chip(cv, s, W / 2, p.y + p.h - 52, p.hue, { align: 'center', size: 15 });
+            cv.alpha(p.f);
         }
         function paused(cv, t) {
-            const p = card(cv, t, 760, 200);
-            cv.text('Paused', W / 2, p.y + 80, 40, t.text, { align: 'center', font: 'bold' });
-            cv.text(state().moving ? 'Stop the car to play' : 'Press the controller or tap to go on.  GAMES tab: the menu', W / 2, p.y + 140, 24, t.dim, { align: 'center', font: 'label' });
+            const p = card(cv, 760, 230, cur.pausedAt);
+            S.label(cv, cur.g.title, W / 2, p.y + 52, p.hue, { align: 'center', size: 15 });
+            cv.text('Paused', W / 2, p.y + 108, 44, S.P.ink, { align: 'center', font: 'bold' });
+            if (state().moving) { cv.text('Stop the car to play', W / 2, p.y + 150, 22, S.P.warn, { align: 'center', font: 'label' }); cv.alpha(1); return; }
+            cv.text('GAMES tab: back to the menu', W / 2, p.y + 146, 20, S.P.dim, { align: 'center', font: 'label' });
+            prompt(cv, p, 'Press or tap to go on');
+            cv.alpha(1);
         }
         function result(cv, t) {
-            const g = cur.g;
-            const p = card(cv, t, 820, 380);
+            const g = cur.g, since = cur.overAt || mono();
+            const p = card(cv, 900, 400, since);
             if (cur.err) {
-                cv.text(g.title + ' stopped', W / 2, p.y + 90, 40, t.crit || t.text, { align: 'center', font: 'bold' });
-                cv.text(String(cur.err.message || cur.err).slice(0, 70), W / 2, p.y + 150, 22, t.dim, { align: 'center', font: 'label' });
-                cv.text('Press the controller or tap to try again', W / 2, p.y + 330, 24, t.dim, { align: 'center', font: 'label' });
+                cv.text(g.title + ' stopped', W / 2, p.y + 100, 40, S.P.bad, { align: 'center', font: 'bold' });
+                cv.text(String(cur.err.message || cur.err).slice(0, 70), W / 2, p.y + 160, 22, S.P.dim, { align: 'center', font: 'label' });
+                prompt(cv, p, 'Press or tap to try again');
+                cv.alpha(1);
                 return;
             }
-            const best = cur.place === 1;
-            cv.text(best ? 'New best!' : 'Game over', p.x + 50, p.y + 70, 40, best ? t.accent : t.text, { font: 'bold' });
-            // the big size has digits only: the number big, the unit (or a game's own format) at a size with every letter
-            const big = (g.score && typeof g.score.format === 'function') ? null : fmt(Object.assign({}, g, { score: {} }), cur.score);
+            const best = cur.place === 1, age = mono() - since, lx = p.x + 56;
+            S.label(cv, g.title, lx, p.y + 54, p.hue, { size: 15 });
+            if (best) {
+                const cw = S.chip(cv, 'New best', lx, p.y + 72, S.P.gold, { solid: true, size: 15 });
+                // a light sweep across the chip
+                const sx = ((age % 1600) / 1600) * (cw + 80) - 40;
+                cv.clip(lx, p.y + 72, cw, 28); cv.quad([[lx + sx, p.y + 72], [lx + sx + 18, p.y + 72], [lx + sx + 6, p.y + 100], [lx + sx - 12, p.y + 100]], [255, 255, 255, 70]); cv.noclip();
+            } else cv.text('Round over', lx, p.y + 96, 28, S.P.ink, { font: 'bold' });
+            // the score counts up and lands with a pop
+            const up = S.ease.out(age / 900), shown = typeof cur.score === 'number' ? cur.score * up : cur.score;
+            const big = (g.score && typeof g.score.format === 'function') ? null : fmt(Object.assign({}, g, { score: {} }), shown);
+            const pop = 1 + 0.08 * Math.max(0, 1 - Math.abs(age - 950) / 160);
+            const col = best ? S.P.gold : S.P.ink;
             if (big !== null && /^[0-9 .,:-]+$/.test(big)) {
-                const bw = cv.text(big, p.x + 50, p.y + 170, 72, t.text, { font: 'num' });
-                if (g.score && g.score.unit) cv.text(g.score.unit, p.x + 50 + bw + 12, p.y + 170, 32, t.dim, { font: 'bold' });
-            } else cv.text(fmt(g, cur.score), p.x + 50, p.y + 165, 40, t.text, { font: 'bold' });
-            if (!best && cur.prevBest !== null) cv.text('Best ' + fmt(g, cur.prevBest), p.x + 50, p.y + 220, 26, t.dim, { font: 'label' });
-            // the top list, right
-            const top = scores.top(g.id), lx = p.x + 470;
-            cv.text('Top ' + top.length, lx, p.y + 70, 26, t.dim, { font: 'bold' });
+                const size = Math.round(96 * pop);
+                cv.text(big, lx, p.y + 210, size, S.a(best ? S.P.gold : p.hue, 0.22), { font: 'num' });
+                const bw = cv.text(big, lx, p.y + 208, size, col, { font: 'num' });
+                if (g.score && g.score.unit) cv.text(g.score.unit, lx + bw + 14, p.y + 208, 32, S.P.dim, { font: 'bold' });
+            } else cv.text(fmt(g, cur.score), lx, p.y + 200, 44, col, { font: 'bold' });
+            if (!best && cur.prevBest !== null) { S.label(cv, 'Best', lx, p.y + 262, S.P.dim, { size: 13 }); cv.text(fmt(g, cur.prevBest), lx + 58, p.y + 263, 22, S.P.ink, { font: 'bold' }); }
+            // the top list, right: rows slide in one after another, each with a bar against the best
+            const top = scores.top(g.id), rx = p.x + p.w - 360, rw = 300;
+            S.label(cv, 'Top ' + top.length, rx, p.y + 54, S.P.dim, { size: 15 });
+            const vmax = top.reduce((m, e) => Math.max(m, Math.abs(e.score)), 1), lower = g.score && g.score.lower;
             top.forEach((e, i) => {
-                const mine = i + 1 === cur.place;
-                cv.text((i + 1) + '.', lx, p.y + 115 + i * 40, 26, mine ? t.accent : t.dim, { font: 'label' });
-                cv.text(fmt(g, e.score), lx + 46, p.y + 115 + i * 40, 26, mine ? t.accent : t.text, { font: 'bold' });
+                const rf = S.ease.out((age - 150 - i * 70) / 300);
+                if (rf <= 0) return;
+                const mine = i + 1 === cur.place, ry = p.y + 78 + i * 46;
+                cv.alpha(p.f * rf);
+                if (mine) cv.roundRect(rx - 12, ry, rw + 24, 40, 10, S.a(p.hue, 0.16));
+                cv.text(String(i + 1), rx, ry + 28, 20, mine ? p.hue : S.P.faint, { font: 'bold' });
+                cv.text(fmt(g, e.score), rx + 34, ry + 28, 22, mine ? S.P.ink : S.P.dim, { font: 'bold' });
+                const k = lower ? (top[0].score / Math.max(1e-9, e.score)) : Math.abs(e.score) / vmax;
+                S.meter(cv, rx + 170, ry + 16, (rw - 170) * rf, 8, k, mine ? p.hue : S.P.faint);
+                cv.alpha(p.f);
             });
-            cv.text('Press the controller or tap to play again.  GAMES tab: the menu', W / 2, p.y + 345, 22, t.dim, { align: 'center', font: 'label' });
+            prompt(cv, p, 'Press or tap to play again');
+            cv.text('GAMES tab: the menu', W / 2, p.y + p.h - 14, 15, S.P.faint, { align: 'center', font: 'label' });
+            cv.alpha(1);
         }
         ctx.loop('MAIN', 30, render);
         log.info('parked games started');

@@ -142,7 +142,7 @@ function play(g, opts) {
     const rnd = () => { seed = (seed * 1103515245 + 12345) & 0x7fffffff; return seed / 0x80000000; };
     const saved = {};
     const api = {
-        W: 1600, H: 520, now: () => t, random: rnd, log: { info() {}, warn() {}, error() {} }, theme: () => THEME,
+        W: 1600, H: 520, now: () => t, random: rnd, log: { info() {}, warn() {}, error() {} }, theme: () => THEME, style: require(path.join(APP, 'style')),
         best: () => null, top: () => [], store: { get: (k) => saved[k], set: (k, v) => { saved[k] = JSON.parse(JSON.stringify(v)); } },
         end(score) { assert.strictEqual(ended, null, 'end() called twice'); assert.ok(typeof score === 'number' && isFinite(score), 'end(score): a number'); ended = score; },
         steering: () => steer, steerSource: () => opts.source, pedal: () => pedal, pedalSource: () => opts.source,
@@ -185,6 +185,10 @@ games.filter((g) => !only || g.id === only).forEach((g) => {
             const reqs = (src.match(/require\(\s*['"][^'"]+['"]\s*\)/g) || []).map((r) => r.replace(/require\(\s*['"]|['"]\s*\)/g, ''));
             reqs.forEach((r) => assert.ok(/^\.\/[^/]+$/.test(r), f + ': require(\'' + r + '\'): only the game\'s own files'));
         });
+    });
+    if (g.art) test(g.id + ': menu art draws', () => {
+        const S = require(path.join(APP, 'style'));
+        for (let ms = 0; ms < 20000; ms += 333) g.art(fakeCanvas(), 100, 100, 184, 184, S, ms);
     });
     ['knob', 'wheel'].forEach((source) => test(g.id + ': plays 3 minutes headless (' + source + ')', () => {
         const r = play(g, { ms: 180000, seed: 7, source });
