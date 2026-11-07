@@ -18,6 +18,7 @@
  * Score for the high-score table: the longest rally of the match (hits).
  */
 const { PaddleDuel, COURT, PADDLE } = require('./game');
+const look = require('./draw');
 
 const WHEEL_RANGE = 90;      // real wheel: degrees from centre for full paddle travel (gentle turns)
 const KNOB_RANGE = 30;       // virtual wheel (6 degrees a click): 5 clicks from centre to the edge
@@ -38,6 +39,7 @@ class Game {
         const d = this.angle();
         if (this.src === 'wheel' && d !== null) this.g.steer(d);
         this.g.newMatch();
+        this.fx = api.style ? new look.Fx(api.style) : null;
     }
 
     get passenger() { return this.driver === 'L' ? 'R' : 'L'; }
@@ -81,7 +83,9 @@ class Game {
         const d = this.angle();
         this.g.steer(this.g.byCtl('wheel') ? d : null);
         this.g.update(dtMs / 1000);
+        if (this.fx) this.fx.update(dtMs);
         this.g.takeEvents().forEach((e) => {
+            if (this.fx) this.fx.event(e, this.g);
             if (e[0] !== 'over' || this.ended) return;
             this.ended = true;
             const r = this.g.result();
@@ -90,7 +94,10 @@ class Game {
         });
     }
 
-    draw(cv) { this.g.draw(cv, this.api.theme ? this.api.theme() : {}); }
+    draw(cv) {
+        if (this.fx) look.draw(cv, this.g, this.api.style, this.fx);
+        else this.g.draw(cv, this.api.theme ? this.api.theme() : {});
+    }
 
     /** the passenger's paddle for knob and touch (when the wheel isn't using the knob) */
     knobSide() { return this.src === 'knob' ? null : this.passenger; }
@@ -149,6 +156,7 @@ module.exports = {
     order: 20,
     needs: ['wheel'],
     score: { unit: 'hits', lower: false },
+    art: look.art,
     create(api) { return new Game(api); },
     Game,
     PADDLE,
