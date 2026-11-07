@@ -126,7 +126,7 @@ const play = (game, s) => { for (let i = 0; i < Math.round(s * 60); i++) game.up
 
 test('plugin: the module has what the shell reads', () => {
     assert.strictEqual(plugin.id, 'paddle-duel');
-    assert.ok(plugin.title.length <= 18 && plugin.blurb.length <= 44);
+    assert.ok(plugin.title.length <= 16 && plugin.blurb.length <= 28);
     assert.deepStrictEqual(plugin.needs, ['wheel']);
     assert.strictEqual(plugin.score.lower, false);
     const g = plugin.create(shell());

@@ -19,15 +19,15 @@
  */
 
 const W = 1600, H = 520;
-const COURT = { top: 74, bottom: 506 };            // the walls the ball bounces off
-const PADDLE = { w: 18, h: 112, inset: 64 };        // inset: paddle centre from the screen's edge
+const COURT = { top: 112, bottom: 484 };           // the walls the ball bounces off (safe area y 44..512; the shell's status line sits below)
+const PADDLE = { w: 18, h: 100, inset: 64 };        // inset: paddle centre from the screen's edge
 const BALL_R = 11;
 const SPEED = { start: 640, hit: 1.045, max: 1500, hot: 1.22 };
 const MAX_ANGLE = 56 * Math.PI / 180;              // leaving angle at the paddle's very edge
 const MIN_VX = 0.42;                                // |vx| never below this share of the speed (no endless wall bouncing)
 const SPIN = { take: 1.1, max: 1100, decay: 1.4 };  // px/s^2 per px/s of paddle speed, cap, decay per s
 const PADDLE_VMAX = 1500;                           // px/s a paddle can follow its target
-const BUMPER = { x: W / 2, r: 30, period: 7.0, span: 140 };
+const BUMPER = { x: W / 2, r: 28, period: 7.0, span: 120 };
 const HOT_EVERY = 6;
 const SERVE_S = 1.1, POINT_S = 0.9;
 const TRAIL = 10;
@@ -331,17 +331,17 @@ class PaddleDuel {
         cv.fillRect(0, COURT.top, W / 2, COURT.bottom - COURT.top, alpha(left, 0.04));
         cv.fillRect(W / 2, COURT.top, W / 2, COURT.bottom - COURT.top, alpha(right, 0.04));
         for (let y = COURT.top + 10; y < COURT.bottom - 10; y += 30) cv.fillRect(W / 2 - 2, y, 4, 16, alpha(dim, 0.35));
-        cv.arc(W / 2, MID, 88, 91, 0, 360, alpha(dim, 0.18));
+        cv.arc(W / 2, MID, 80, 83, 0, 360, alpha(dim, 0.18));
 
         // header: names, scores, rally
-        cv.text(this.label('L'), 40, 46, 24, left, { font: 'bold', spacing: 1.5 });
-        cv.text(this.label('R'), W - 40, 46, 24, right, { font: 'bold', spacing: 1.5, align: 'right' });
-        cv.text(String(this.L.score), W / 2 - 70, 58, 56, text, { font: 'num', align: 'center' });
-        cv.text(String(this.R.score), W / 2 + 70, 58, 56, text, { font: 'num', align: 'center' });
-        cv.text(':', W / 2, 52, 40, dim, { font: 'bold', align: 'center' });
-        if (this.rally > 1 && this.state === 'play') cv.text('RALLY ' + this.rally, W / 2 + 260, 46, 22, this.ball.hot ? hotC : dim, { font: 'bold', spacing: 1.5, align: 'center' });
-        else cv.text('FIRST TO ' + this.o.target, W / 2 + 260, 46, 22, dim, { font: 'bold', spacing: 1.5, align: 'center' });
-        if (this.longest > 1) cv.text('BEST RALLY ' + this.longest, W / 2 - 260, 46, 22, dim, { font: 'bold', spacing: 1.5, align: 'center' });
+        cv.text(this.label('L'), 40, 88, 24, left, { font: 'bold', spacing: 1.5 });
+        cv.text(this.label('R'), W - 40, 88, 24, right, { font: 'bold', spacing: 1.5, align: 'right' });
+        cv.text(String(this.L.score), W / 2 - 70, 100, 52, text, { font: 'num', align: 'center' });
+        cv.text(String(this.R.score), W / 2 + 70, 100, 52, text, { font: 'num', align: 'center' });
+        cv.text(':', W / 2, 94, 40, dim, { font: 'bold', align: 'center' });
+        if (this.rally > 1 && this.state === 'play') cv.text('RALLY ' + this.rally, W / 2 + 260, 88, 22, this.ball.hot ? hotC : dim, { font: 'bold', spacing: 1.5, align: 'center' });
+        else cv.text('FIRST TO ' + this.o.target, W / 2 + 260, 88, 22, dim, { font: 'bold', spacing: 1.5, align: 'center' });
+        if (this.longest > 1) cv.text('BEST RALLY ' + this.longest, W / 2 - 260, 88, 22, dim, { font: 'bold', spacing: 1.5, align: 'center' });
 
         // bumper
         if (this.bumperOn) {
