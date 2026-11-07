@@ -115,14 +115,14 @@ function debris(cv, r) {
     }
 }
 
-/** hud: score and best top left, boost meter bottom left; the countdown card */
+/** hud: score and best top left, boost meter top right (the shell writes its input line bottom left); the countdown card */
 function hud(cv, r, how) {
-    cv.fillRect(24, 18, 260, 76, C.hud);
-    cv.text(String(r.score()), 40, 66, 44, r.flash > 0 ? C.crystal : C.text, { font: 'num' });
-    cv.text('BEST ' + r.best, 40, 86, 18, C.dim, { font: 'bold' });
-    cv.text(r.metres() + ' m', 268, 66, 22, C.dim, { font: 'bold', align: 'right' });
+    cv.fillRect(24, 50, 260, 76, C.hud);
+    cv.text(String(r.score()), 40, 98, 44, r.flash > 0 ? C.crystal : C.text, { font: 'num' });
+    cv.text('BEST ' + r.best, 40, 118, 18, C.dim, { font: 'bold' });
+    cv.text(r.metres() + ' m', 268, 98, 22, C.dim, { font: 'bold', align: 'right' });
 
-    const bx = 24, by = H - 44, bw = 260;
+    const bw = 260, bx = W - 24 - bw, by = 76;
     cv.fillRect(bx, by - 26, bw, 48, C.hud);
     cv.text('BOOST', bx + 16, by - 4, 16, C.dim, { font: 'bold' });
     cv.fillRect(bx + 92, by - 16, bw - 108, 12, C.boostLow);
