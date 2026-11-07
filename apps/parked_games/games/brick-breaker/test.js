@@ -138,7 +138,7 @@ test('power-ups: wide, slow, multi-ball, extra life', () => {
 
 test('the shell interface: module, input events, pause, end', () => {
     assert.strictEqual(game.id, 'brick-breaker');
-    assert.ok(game.title.length <= 18 && game.blurb.length <= 45);
+    assert.ok(game.title.length <= 18 && game.blurb.length <= 28);
     assert.deepStrictEqual(game.needs, []);
     assert.strictEqual(game.score.lower, false);
     const ended = [];
