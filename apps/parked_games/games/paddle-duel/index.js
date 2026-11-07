@@ -145,7 +145,7 @@ class Game {
 module.exports = {
     id: 'paddle-duel',
     title: 'Paddle Duel',
-    blurb: 'Driver on the wheel vs passenger on the knob',
+    blurb: 'Wheel vs knob, two players',
     order: 20,
     needs: ['wheel'],
     score: { unit: 'hits', lower: false },
