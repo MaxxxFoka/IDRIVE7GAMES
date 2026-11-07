@@ -96,8 +96,9 @@ Input events:
 | `{ type: 'touch', phase, x, y }` | a finger on the screen: `phase` `'down'`, `'move'`, `'up'`; x, y in canvas pixels |
 | `{ type: 'tap', x, y }` | a short tap (also sent as touch down / up) |
 
-BACK, MENU and OPTION always stay with the car's HMI: BACK leaves the game for the menu (the round is
-paused and can be continued).
+The app is one screen. While a game runs, the header's tabs are GAMES (back to the menu, the round
+paused), the game's own name, and SETTINGS. BACK, MENU and OPTION always stay with the car's HMI:
+BACK leaves the app, the round pauses and goes on when the app is opened again.
 
 ## Drawing (`cv`)
 
@@ -134,7 +135,7 @@ node kit/tools/emu.js parked_games          # http://localhost:8077
 
 No BMW SDK is needed for this: without `oap-sdk/` the emulator builds an offline preview.
 
-In the emulator: the menu's tiles are tapped (or turn the knob and press), the mouse wheel or `[` `]`
+In the emulator: the menu's tiles are tapped (or turn the knob and press), the GAMES tab goes back to the menu, the mouse wheel or `[` `]`
 turns the knob, `Enter` presses, arrow keys push, `Backspace` is BACK. Under *Vehicle signals*,
 *Manual* feeds the car: speed, gear and engine speed, and for the games also **Steering** (+ = right),
 **Pedal** and **Parking brake**. With speed 0, gear P and the parking brake on, the Steering slider is

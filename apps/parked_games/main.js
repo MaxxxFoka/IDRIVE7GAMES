@@ -3,12 +3,13 @@
  * Parked Games - small games for when the car is parked, all in one app.
  *
  * The shell (this file) owns everything around a game; the games plug in as games/<id>/index.js
- * (the interface: GAMES.md). Screens:
- *   MAIN  the menu: a tile per game (title, line, best score, WHEEL / PEDAL tags), tapped or chosen
- *         with the knob (the kit's page targets), and what the wheel and pedal can do right now.
- *         Settings is the kit's own tab.
- *   GAME  the game, full height, drawn by the GPU renderer. BACK (the HMI's) goes back to MAIN and
- *         pauses the round; opening the same game again continues it.
+ * (the interface: GAMES.md). One canvas screen, MAIN (the kit's display drives one canvas screen
+ * with the GPU renderer, touch and the controller), in two modes:
+ *   menu  a tile per game (title, line, best score, WHEEL / PEDAL tags), tapped or chosen with the
+ *         knob (the kit's page targets), and what the wheel and pedal can do right now.
+ *   game  the round, the whole page. The header's tabs: GAMES (back to the menu, the round paused),
+ *         the game's own, and the kit's SETTINGS. BACK leaves the app (the round pauses; it goes on
+ *         when the app is opened again).
  *
  * Safety: the app plays only while the car stands (setting "Parked only", on by default). The
  * steering wheel counts only in P with the parking brake applied; the accelerator pedal also needs
@@ -145,7 +146,7 @@ mgu.run({
 
         /* ---------- input ---------- */
         function input(ev) {
-            if (!cur || !ui.isVisible('GAME')) return;
+            if (!cur || mode !== 'game' || !shown()) return;
             if (cur.phase !== 'play') {
                 if (ev.type === 'press' || ev.type === 'tap') action();
                 return;
@@ -166,17 +167,19 @@ mgu.run({
         const PH = { 1: 'down', 2: 'move', 3: 'up' };
         if (ctx.onTouch) ctx.onTouch((phase, x, y) => { if (PH[phase]) input({ type: 'touch', phase: PH[phase], x, y }); });
         ctx.onTap((x, y) => input({ type: 'tap', x, y }));
-        ui.onClick('BTN_AGAIN', () => { if (!action() && cur && cur.phase === 'play') input({ type: 'press' }); });
 
         /* ---------- the menu: a tile per game (the kit's page targets: tap, or turn and press) ---------- */
-        let sel = 0;
+        let sel = 0, mode = 'menu';
         function open(g) {
             if (state().moving) return;
             sel = games.indexOf(g);
             if (!(cur && cur.g === g && cur.phase !== 'over')) newRound(g);
-            ui.open('GAME');
+            mode = 'game'; lastT = mono();
         }
-        ui.onClick('BTN_PLAY', () => { if (games[sel]) open(games[sel]); });
+        function toMenu() { pause(); mode = 'menu'; }
+        // the header's tabs: 0 = GAMES (the menu), 1 = the round's game
+        ctx.onTab((i) => { if (i === 0) toMenu(); else if (i === 1 && cur && !state().moving) { mode = 'game'; lastT = mono(); } });
+        const tabs = () => ['Games'].concat(cur ? [cur.g.title] : []);
         function status(st) {
             if (st.moving) return 'Parked only: the games wait while the car moves';
             const w = st.wheel ? 'Steering wheel ready' : 'Wheel: ' + st.why.wheel + ', the knob steers';
@@ -187,7 +190,7 @@ mgu.run({
         function drawMenu() {
             const t = ctx.theme(), st = state();
             const cv = ctx.canvas(W, H).clear(t.bg);
-            G.frame(cv, t, ['Parked Games'], 0);
+            G.frame(cv, t, tabs(), 0);
             const top = G.TOP + 12, bottom = G.pageBottom(cv) - 8;
             cv.text(status(st), 24, top + 22, 22, st.moving ? (t.warn || t.text) : t.dim, { font: 'label' });
             if (!games.length) { cv.text('No games installed', W / 2, (top + bottom) / 2, 32, t.dim, { align: 'center', font: 'bold' }); return ui.image('MAIN_GFX', cv); }
@@ -199,8 +202,10 @@ mgu.run({
                 const going = cur && cur.g === g && cur.phase === 'paused';
                 cv.roundRect(x, y, tw, th, 14, t.panel || '#1a1d22');
                 if (i === sel) cv.strokeRoundRect(x, y, tw, th, 14, 2, t.dim);
+                cv.clip(x, y, tw - 8, th);
                 cv.text(g.title, x + 20, y + 44, 30, st.moving ? t.dim : t.text, { font: 'bold' });
                 if (g.blurb) cv.text(g.blurb, x + 20, y + 76, 20, t.dim, { font: 'label' });
+                cv.noclip();
                 const b = scores.best(g.id);
                 cv.text(b === null ? 'no score yet' : 'best ' + fmt(g, b), x + 20, y + th - 22, 22, b === null ? t.dim : t.accent, { font: 'bold' });
                 const tags = (g.needs || []).map((k) => TAG[k]).filter(Boolean).concat(going ? ['PAUSED'] : []);
@@ -216,18 +221,17 @@ mgu.run({
             });
             return ui.image('MAIN_GFX', cv);
         }
-        ctx.loop('MAIN', 4, drawMenu);
         if (games.length > SLOTS) log.warn('only the first ' + SLOTS + ' games fit the menu');
 
         /* ---------- run while the game is on screen ---------- */
-        const shown = () => ui.isVisible('GAME') && (!ui.hasFocus || ui.hasFocus('GAME'));
+        const shown = () => ui.isVisible('MAIN') && !ui.isVisible('SETTINGS') && (!ui.hasFocus || ui.hasFocus('MAIN'));
         let grabbed = false;
         function sync() {
             const st = state();
             if (st.moving && cur && cur.phase === 'play') { pause(); log.info('car moving: paused'); }
-            if (st.moving && ui.isVisible('GAME')) ui.open('MAIN');
+            if (st.moving && mode === 'game') mode = 'menu';
             if (!shown()) pause();
-            const want = shown() && !st.moving;
+            const want = shown() && mode === 'game' && !st.moving;
             if (want !== grabbed) { grabbed = want; if (ctx.controller) ctx.controller.grab(want); }
         }
         setInterval(sync, 200);
@@ -236,17 +240,18 @@ mgu.run({
         /* ---------- drawing ---------- */
         let lastT = mono();
         function render() {
+            if (mode !== 'game' || !cur) return drawMenu();
             const t = ctx.theme();
             const cv = ctx.canvas(W, H).clear(t.bg);
+            G.frame(cv, t, tabs(), 1);         // the header's tabs (full-screen layout: drawn in the header, not on the page)
             const now = mono(), dt = Math.min(50, Math.max(0, now - lastT));
             lastT = now;
-            if (!cur) { cv.text('Choose a game in the list', W / 2, H / 2, 32, t.dim, { align: 'center', font: 'bold' }); return ui.image('GAME_GFX', cv); }
             if (cur.phase === 'play') call((gm) => gm.update(dt));
             call((gm) => gm.draw(cv));
             hint(cv, t);
             if (cur.phase === 'paused') paused(cv, t);
             else if (cur.phase === 'over') result(cv, t);
-            return ui.image('GAME_GFX', cv);
+            return ui.image('MAIN_GFX', cv);
         }
         /** Where the wheel / pedal can't be used: one small line, bottom left. */
         function hint(cv, t) {
@@ -264,9 +269,9 @@ mgu.run({
             return { x, y };
         }
         function paused(cv, t) {
-            const p = card(cv, t, 560, 200);
+            const p = card(cv, t, 760, 200);
             cv.text('Paused', W / 2, p.y + 80, 40, t.text, { align: 'center', font: 'bold' });
-            cv.text(state().moving ? 'Stop the car to play' : 'Press the controller or tap to go on', W / 2, p.y + 140, 24, t.dim, { align: 'center', font: 'label' });
+            cv.text(state().moving ? 'Stop the car to play' : 'Press the controller or tap to go on.  GAMES tab: the menu', W / 2, p.y + 140, 24, t.dim, { align: 'center', font: 'label' });
         }
         function result(cv, t) {
             const g = cur.g;
@@ -279,7 +284,12 @@ mgu.run({
             }
             const best = cur.place === 1;
             cv.text(best ? 'New best!' : 'Game over', p.x + 50, p.y + 70, 40, best ? t.accent : t.text, { font: 'bold' });
-            cv.text(fmt(g, cur.score), p.x + 50, p.y + 170, 72, t.text, { font: 'num' });
+            // the big size has digits only: the number big, the unit (or a game's own format) at a size with every letter
+            const big = (g.score && typeof g.score.format === 'function') ? null : fmt(Object.assign({}, g, { score: {} }), cur.score);
+            if (big !== null && /^[0-9 .,:-]+$/.test(big)) {
+                const bw = cv.text(big, p.x + 50, p.y + 170, 72, t.text, { font: 'num' });
+                if (g.score && g.score.unit) cv.text(g.score.unit, p.x + 50 + bw + 12, p.y + 170, 32, t.dim, { font: 'bold' });
+            } else cv.text(fmt(g, cur.score), p.x + 50, p.y + 165, 40, t.text, { font: 'bold' });
             if (!best && cur.prevBest !== null) cv.text('Best ' + fmt(g, cur.prevBest), p.x + 50, p.y + 220, 26, t.dim, { font: 'label' });
             // the top list, right
             const top = scores.top(g.id), lx = p.x + 470;
@@ -289,9 +299,9 @@ mgu.run({
                 cv.text((i + 1) + '.', lx, p.y + 115 + i * 40, 26, mine ? t.accent : t.dim, { font: 'label' });
                 cv.text(fmt(g, e.score), lx + 46, p.y + 115 + i * 40, 26, mine ? t.accent : t.text, { font: 'bold' });
             });
-            cv.text('Press the controller or tap to play again.  BACK: the games', W / 2, p.y + 345, 22, t.dim, { align: 'center', font: 'label' });
+            cv.text('Press the controller or tap to play again.  GAMES tab: the menu', W / 2, p.y + 345, 22, t.dim, { align: 'center', font: 'label' });
         }
-        ctx.loop('GAME', 30, render);
+        ctx.loop('MAIN', 30, render);
         log.info('parked games started');
     },
 });

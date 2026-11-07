@@ -37,26 +37,11 @@
       "name": "MAIN",
       "kind": "canvas",
       "title": "Parked Games",
-      "buttons": [
-        [
-          "BTN_PLAY",
-          "Play"
-        ],
-        [
-          "BTN_SETTINGS",
-          "Settings"
-        ]
-      ]
-    },
-    {
-      "name": "GAME",
-      "kind": "canvas",
-      "title": "Parked Games",
       "bar": false,
       "buttons": [
         [
-          "BTN_AGAIN",
-          "Play"
+          "BTN_SETTINGS",
+          "Settings"
         ]
       ]
     }
