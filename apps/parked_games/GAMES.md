@@ -29,8 +29,8 @@ Rules:
 ```js
 module.exports = {
     id: 'lane-runner',             // the folder's name
-    title: 'Lane Runner',          // menu title (ASCII, up to ~18 characters)
-    blurb: 'Steer between the cones',   // one line under the title (up to ~40 characters)
+    title: 'Lane Runner',          // the menu tile's title (ASCII, up to ~16 characters)
+    blurb: 'Steer between the cones',   // one line under it on the tile (up to ~28 characters)
     order: 10,                     // menu position, low first
     needs: ['wheel'],              // inputs the game is built around: 'wheel', 'pedal' (or [] = knob / touch)
     score: { unit: 'm', lower: false },  // unit shown after scores; lower: true when less is better (times)
@@ -118,6 +118,10 @@ background. Colours are `'#rrggbb'` strings or `[r, g, b, a]` arrays (a = 0..255
 | `cv.alpha(a)` ... `cv.alpha(1)` | draw see-through |
 | `cv.clip(x, y, w, h)` ... `cv.noclip()` | |
 
+**Where to draw.** On the car's full-screen layout the HMI's status strip covers roughly the top
+40 pixels of the page and the sides are cropped by about 12 pixels; the screen can have spare room
+below 520. Keep scores and anything important between y = 44 and y = 512 and x = 16 to 1584.
+
 Large text sizes only have digits and a few letters baked in; keep big numbers numeric and words
 at size 40 or below. There are no pixel reads.
 
@@ -128,10 +132,16 @@ python3 kit/tools/build.py --preview-only parked_games
 node kit/tools/emu.js parked_games          # http://localhost:8077
 ```
 
-In the emulator: the mouse wheel or `[` `]` turns the knob, `Enter` presses, arrow keys push,
-`Backspace` is BACK. The panel's manual signals set speed, gear and engine speed. A save under
+No BMW SDK is needed for this: without `oap-sdk/` the emulator builds an offline preview.
+
+In the emulator: the menu's tiles are tapped (or turn the knob and press), the mouse wheel or `[` `]`
+turns the knob, `Enter` presses, arrow keys push, `Backspace` is BACK. Under *Vehicle signals*,
+*Manual* feeds the car: speed, gear and engine speed, and for the games also **Steering** (+ = right),
+**Pedal** and **Parking brake**. With speed 0, gear P and the parking brake on, the Steering slider is
+the real wheel (the menu says "Steering wheel ready"); with the engine speed at 0 the Pedal slider is
+the real pedal. In *Demo drive* no signals come, so the knob stands in for both. A save under
 `apps/parked_games/` rebuilds and restarts the app.
 
-Unit tests: put them next to the game as `games/<id>/test.js` (plain `node`, `assert`), run with
-`node apps/parked_games/games/<id>/test.js`. `node kit/tools/test_parked_games.js` checks every game
+Unit tests: put them next to the game as `games/<id>/test.js` (plain `node`, `assert`; files named
+`test*.js` are not packed for the car), run with `node apps/parked_games/games/<id>/test.js`. `node kit/tools/test_parked_games.js` checks every game
 against this interface.
