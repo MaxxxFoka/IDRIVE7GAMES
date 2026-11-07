@@ -11,6 +11,7 @@
  */
 const { Round } = require('./game');
 const { draw } = require('./draw');
+const look = require('./look');
 
 const FULL_STEER_DEG = 90;      // wheel angle for full climb / dive
 
@@ -27,6 +28,7 @@ class Game {
         });
         this.knob = 0; this.press = false; this.tap = null;
         this.ended = false;
+        this.fx = api.style ? new look.Fx(api.style) : null;
     }
 
     input(ev) {
@@ -57,6 +59,7 @@ class Game {
     update(dtMs) {
         if (this.ended) return;
         this.round.update(dtMs, this.frame());
+        if (this.fx) this.fx.update(dtMs, this.round);
         if (this.round.over()) { this.ended = true; this.api.end(this.round.score()); }
     }
 
@@ -70,7 +73,10 @@ class Game {
         };
     }
 
-    draw(cv) { draw(cv, this.round, this.api.theme && this.api.theme(), this.hints()); }
+    draw(cv) {
+        if (this.fx) look.draw(cv, this.round, this.api.style, this.fx, this.hints());
+        else draw(cv, this.round, this.api.theme && this.api.theme(), this.hints());
+    }
 }
 
 module.exports = {
@@ -80,5 +86,6 @@ module.exports = {
     order: 30,
     needs: ['wheel', 'pedal'],
     score: { unit: 'pts', lower: false },
+    art: look.art,
     create(api) { return new Game(api); },
 };

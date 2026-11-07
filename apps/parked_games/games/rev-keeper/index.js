@@ -10,6 +10,7 @@
  */
 const { RevKeeper } = require('./logic');
 const { draw } = require('./draw');
+const look = require('./look');
 
 class Game {
     constructor(api) {
@@ -20,17 +21,21 @@ class Game {
             random: api.random,
             onOver: (score) => { if (!this.ended) { this.ended = true; api.end(score); } },
         });
+        this.fx = api.style ? new look.Fx(api.style) : null;
     }
 
     update(dtMs) {
         const p = this.api.pedal();
         this.g.setInput(p == null ? 0 : p / 100);
         this.g.update(dtMs / 1000);
+        if (this.fx) this.fx.update(dtMs, this.g);
     }
 
     draw(cv) {
         const best = this.api.best();
-        draw(cv, this.g, { best: best == null ? null : best, source: this.api.pedalSource(), paused: this.paused });
+        const view = { best: best == null ? null : best, source: this.api.pedalSource(), paused: this.paused };
+        if (this.fx) look.draw(cv, this.g, this.api.style, this.fx, view);
+        else draw(cv, this.g, view);
     }
 
     // the pedal is read in update; the knob is the shell's pedal stand-in, so no events are needed
@@ -46,5 +51,6 @@ module.exports = {
     order: 40,
     needs: ['pedal'],
     score: { unit: 'pts', lower: false },
+    art: look.art,
     create(api) { return new Game(api); },
 };

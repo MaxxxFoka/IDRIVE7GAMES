@@ -13,6 +13,7 @@
  */
 // (engine.X, not destructured: dev/preview.html loads both files as plain scripts in one scope)
 const engine = require('./engine');
+const look = require('./look') || null;     // (undefined in dev/preview.html: the old drawing)
 const SPARK_ID = engine.SPARK;
 
 const W = 1600, H = 520;
@@ -63,10 +64,13 @@ function create(api) {
     let pressedBtn = null, pressedT = 0;
     let now = 0;
 
+    let fx = null;                  // the shell's Night Circuit look, when it hands us api.style (after draw's helpers)
+
     function say(text, colour) { flash.push({ text, colour, t: now }); if (flash.length > 3) flash.shift(); }
 
     function handleEvents() {
         for (const e of eng.takeEvents()) {
+            if (fx) fx.event(e);
             if (e.type === 'rows') say(e.n === 1 ? 'Row!' : e.n + ' rows!', '#ffffff');
             else if (e.type === 'burst') say(e.n === 1 ? 'Burst ' + e.cells : e.n + ' bursts ' + e.cells, PALETTE[1]);
             else if (e.type === 'chain') say('Chain x' + e.n, PALETTE[0]);
@@ -85,7 +89,7 @@ function create(api) {
         else if (a === 'right') eng.move(1);
         else if (a === 'rotate') eng.rotate();
         else if (a === 'swap') eng.swapColours();
-        else if (a === 'drop') eng.drop();
+        else if (a === 'drop') { if (eng.drop() && fx) fx.dropped(); }
         else if (a === 'down') eng.stepDown();
         handleEvents();
     }
@@ -124,7 +128,7 @@ function create(api) {
 
     function update(dt) {
         now += dt;
-        if (!paused) { eng.tick(dt); handleEvents(); }
+        if (!paused) { eng.tick(dt); handleEvents(); if (fx) fx.update(dt); }
     }
 
     /* ---------- drawing ---------- */
@@ -215,7 +219,22 @@ function create(api) {
         cells.forEach((c, i) => cell(cv, ox + (c[0] - x0) * size, oy + (c[1] - y0) * size, colours[i], { size }));
     }
 
+    function icon(cv, id, cx, cy, c) {
+        if (id === 'left') arrow(cv, cx, cy, 'L', c);
+        else if (id === 'right') arrow(cv, cx, cy, 'R', c);
+        else if (id === 'drop') arrow(cv, cx, cy, 'D', c);
+        else rotateIcon(cv, cx, cy, c);
+    }
+
+    if (api.style && look) {
+        fx = look.makeLook(api.style, {
+            eng, engine, W, H, CELL, WX, WY, cols, rows, buttons, BTN_Y, best, icon,
+            now: () => now, state: () => ({ now, paused, pressedBtn, pressedT }),
+        });
+    }
+
     function draw(cv) {
+        if (fx) return fx.draw(cv);
         // the shell clears the frame to the theme's background
         const t = Object.assign({}, DEFAULT_THEME, (api.theme && api.theme()) || {});
         for (const k of ['panelTop', 'panelEdge', 'track', 'accent2', 'text', 'dim', 'crit']) if (typeof t[k] !== 'string') t[k] = DEFAULT_THEME[k];
@@ -281,5 +300,6 @@ module.exports = {
     order: 70,
     needs: [],
     score: { unit: 'pts', lower: false },
+    art: look ? look.art : undefined,
     create,
 };

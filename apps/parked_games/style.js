@@ -207,7 +207,11 @@ function countdown(cv, cx, cy, msLeft, step, c, caption) {
     cv.alpha(clamp01(1.3 - f));
     cv.text(String(n), cx, cy + 36 * sc, Math.round(96 * sc), P.ink, { font: 'num', align: 'center' });
     cv.alpha(1);
-    if (caption) label(cv, caption, cx, cy + 130, P.ink, { align: 'center', size: T.label });
+    if (caption) {
+        const cw = cv.textWidth(String(caption).toUpperCase(), T.label, CAPS) + 40;
+        cv.roundRect(cx - cw / 2, cy + 106, cw, 36, 18, [5, 8, 16, 190]);
+        label(cv, caption, cx, cy + 130, P.ink, { align: 'center', size: T.label });
+    }
 }
 
 /* ---------- juice ---------- */
