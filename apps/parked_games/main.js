@@ -279,7 +279,12 @@ mgu.run({
             }
             const best = cur.place === 1;
             cv.text(best ? 'New best!' : 'Game over', p.x + 50, p.y + 70, 40, best ? t.accent : t.text, { font: 'bold' });
-            cv.text(fmt(g, cur.score), p.x + 50, p.y + 170, 72, t.text, { font: 'num' });
+            // the big size has digits only: the number big, the unit (or a game's own format) at a size with every letter
+            const big = (g.score && typeof g.score.format === 'function') ? null : fmt(Object.assign({}, g, { score: {} }), cur.score);
+            if (big !== null && /^[0-9 .,:-]+$/.test(big)) {
+                const bw = cv.text(big, p.x + 50, p.y + 170, 72, t.text, { font: 'num' });
+                if (g.score && g.score.unit) cv.text(g.score.unit, p.x + 50 + bw + 12, p.y + 170, 32, t.dim, { font: 'bold' });
+            } else cv.text(fmt(g, cur.score), p.x + 50, p.y + 165, 40, t.text, { font: 'bold' });
             if (!best && cur.prevBest !== null) cv.text('Best ' + fmt(g, cur.prevBest), p.x + 50, p.y + 220, 26, t.dim, { font: 'label' });
             // the top list, right
             const top = scores.top(g.id), lx = p.x + 470;
