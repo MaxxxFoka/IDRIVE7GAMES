@@ -282,9 +282,30 @@ imported at upstream commit `6a269e7` without its reference apps. The kit (runti
 emulator, build and install tools) is their work; go and see their apps too. The kit's
 original guide is kept here as [KIT_README.md](KIT_README.md).
 
-- Code: [MIT licence](LICENSE), copyright the kit's authors and contributors.
-- The GPU renderer and the emulator's draw engine (`kit/renderd`) are **GPL-3.0-or-later**, see
-  [kit/renderd/LICENSE](kit/renderd/LICENSE).
+- Code: [MIT licence](LICENSE). The kit is copyright cauliflowermossgrape and its contributors;
+  Parked Games (`apps/parked_games`) is copyright Maksim (MaxxxFoka).
+- The GPU renderer and the emulator's draw engine (`kit/renderd`) are **GPL-3.0-or-later**
+  (mgu-render, copyright Robert Nisipeanu and IterioDev), see [kit/renderd/LICENSE](kit/renderd/LICENSE)
+  and [kit/renderd/README.md](kit/renderd/README.md#licence). The parts taken from the kit's first
+  renderer also stay MIT ([LICENSE.mgu-renderd](kit/renderd/LICENSE.mgu-renderd)).
+- The vsomeip headers in `kit/renderd/inputgate/vsomeip-include` are **MPL-2.0** (notice in each
+  file). The Wayland ivi protocol files carry their own notices.
+- The kit's Latin font atlases (`kit/runtime/fonts/{label,bold,num,light,gear}.json`) are baked
+  from the Ubuntu font family, under the **Ubuntu Font Licence 1.0**
+  ([kit/runtime/fonts/UFL-Ubuntu.txt](kit/runtime/fonts/UFL-Ubuntu.txt)).
+- The Noto Sans SC and Noto Sans KR glyphs baked into the kit's fonts are under the **SIL Open Font
+  Licence 1.1** ([kit/runtime/fonts/OFL-NotoSansSC.txt](kit/runtime/fonts/OFL-NotoSansSC.txt),
+  [kit/localization/fonts/OFL-NotoSansKR.txt](kit/localization/fonts/OFL-NotoSansKR.txt)).
+- The six games, their art and every picture in `docs/media/parked-games/` are original and drawn
+  in code: no outside art, sounds or game assets.
 - Chinese translation notice: [NOTICE.zh-CN.md](NOTICE.zh-CN.md).
 - BMW, iDrive and the BMW logo are trademarks of BMW AG, used here only to say which cars this
   runs on.
+
+**Not in this repository, on purpose.** BMW's app SDK (`oap-sdk/`, extracted from your own head
+unit with `kit/tools/extract_sdk.js`), built packages (`dist/`, `*.mgu`, `*.tgz`, which contain
+that SDK), SSH keys and enrolment folders, and anything that identifies a car (VIN, captures, logs)
+must never be committed. `.gitignore` keeps them out; please don't force-add them.
+
+The kit's translated BMW fault texts (`kit/localization/diagnostic-*`, used only by upstream's
+`dtc_scanner` app, which isn't in this repo) are left out too; get them from upstream if you need them.
