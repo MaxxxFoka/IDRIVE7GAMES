@@ -90,7 +90,7 @@ Input events:
 | `{ type: 'tap', x, y }` | a short tap (also sent as touch down / up) |
 
 The app is one screen. While a game runs, the header's tabs are GAMES (back to the menu, the round
-paused), the game's own name, and SETTINGS. BACK, MENU and OPTION always stay with the car's HMI:
+paused) and the game's own name. The app has no settings. BACK, MENU and OPTION always stay with the car's HMI:
 BACK leaves the app, the round pauses and goes on when the app is opened again.
 
 ## Drawing (`cv`)

@@ -50,8 +50,8 @@ to BMW's apps, keeps your high scores, and pauses by itself the moment the car m
 </p>
 
 One tile per game, each with its own little animated scene. Tap a tile, or turn the knob and
-press. Your best score shows on the tile once you have one. While a game runs, the header has three tabs: **GAMES** (back here, the round paused), the
-game itself, and **SETTINGS**.
+press. Your best score shows on the tile once you have one. While a game runs, the header has two tabs: **GAMES** (back here, the round paused) and the
+game itself.
 
 ---
 
@@ -172,7 +172,7 @@ Every game is played with the iDrive knob alone; touch is an extra.
 | Brick Breaker | Turn: paddle. Press: launch | Up / down: long move. Right: launch | Drag or tap to place the paddle |
 | Block Drop | Turn: move. Press: rotate | Up: swap colours. Down: drop. Left / right: move | Rotate / Left / Right / Drop buttons, tap the well to swap |
 
-**Settings** (the SETTINGS tab): a *Colour theme*. The parked lock has no setting: it is always on.
+There are no settings: the look is fixed (Night Circuit) and the parked lock is always on.
 
 ---
 

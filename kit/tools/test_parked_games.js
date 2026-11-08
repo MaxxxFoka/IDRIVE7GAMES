@@ -37,9 +37,9 @@ test('vehicle: moving above 3 km/h pauses the games, always', () => {
     v.speedRaw({ speedVehicleCentreOfGravity: 65535 }); assert.strictEqual(v.state().moving, true, 'an invalid speed keeps the last one');
 });
 
-test('app.json: no Parked only setting', () => {
+test('app.json: no settings (no Parked only switch, no colour theme)', () => {
     const app = JSON.parse(fs.readFileSync(path.join(APP, 'app.json'), 'utf8'));
-    assert.ok(!(app.settings || []).some((x) => x.key === 'parkedOnly'));
+    assert.deepStrictEqual(app.settings || [], []);
 });
 
 /* ---------- controls.js ---------- */
