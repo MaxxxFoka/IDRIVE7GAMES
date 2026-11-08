@@ -60,7 +60,7 @@ module.exports = {
 
 ### When the games play
 
-- The whole app plays only while the car stands (≤ 3 km/h; setting "Parked only", on by default).
+- The whole app plays only while the car stands (≤ 3 km/h). This is always on; there is no setting for it.
   When the car moves the round pauses and the shell goes back to the menu.
 - All input comes as events to `input(ev)` (below). Knob clicks are discrete: a game that wants a
   position (a paddle, a throttle) keeps its own and moves it per click; one that wants a held

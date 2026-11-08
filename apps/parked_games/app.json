@@ -30,12 +30,6 @@
   ],
   "settings": [
     {
-      "key": "parkedOnly",
-      "label": "Parked only (pauses while driving)",
-      "type": "bool",
-      "default": true
-    },
-    {
       "key": "theme",
       "label": "Colour theme",
       "type": "choice",
