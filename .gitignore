@@ -7,6 +7,15 @@ dist/
 # keys / local stuff
 *.pem
 *.key
+id_rsa*
+id_ed25519*
+*.p12
+*.pfx
+.env
+.env.*
+# the SSH tool's per-car folders: data/enrollments/<VIN>/ (key + connect.txt with the unit's IP)
+enrollments/
+connect.txt
 node_modules/
 __pycache__/
 *.pyc
