@@ -10,7 +10,7 @@
  * bench, the emulator's demo) counts as standing. Every game is played with the iDrive knob (and
  * touch); the steering wheel and the pedals are not inputs.
  */
-const MAX_KMH = 3;
+const MAX_KMH = 15;
 
 class Vehicle {
     constructor() { this.kmh = null; }
