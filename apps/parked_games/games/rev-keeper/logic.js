@@ -1,15 +1,15 @@
 'use strict';
 /**
- * logic.js - Rev Keeper's rules: keep the needle inside a moving green zone with the pedal.
+ * logic.js - Rev Keeper's rules: keep the needle inside a moving green zone with the throttle.
  * No drawing and no shell code here, so it runs under plain node (test.js).
  *
  *   const g = new RevKeeper({ random, onOver(score) });   // one round
- *   g.setInput(level)     // 0..1: pedal travel
+ *   g.setInput(level)     // 0..1: throttle (the knob)
  *   g.update(dtSeconds)
  *   g.state               // 'count' (3-2-1) | 'play' | 'over'
  *
  * Rules:
- *   - The needle follows the pedal with engine-like inertia: it climbs fast and falls back slower.
+ *   - The needle follows the throttle with engine-like inertia: it climbs fast and falls back slower.
  *   - The green zone moves in phases: drift, hold, jump, sweep, breathe. A jump is announced by a
  *     blinking ghost outline at the new spot first.
  *   - Inside the zone you score; staying in builds a multiplier (x1 .. x8, +1 every 2 s) and the
@@ -27,7 +27,7 @@ const STRAIN_OVER = 0.42, STRAIN_UNDER = 0.30, STRAIN_COOL = 0.10, STRAIN_DIST =
 const GRACE = 0.6;                        // seconds at the start of play without strain
 const COUNT_S = 2.4;                      // the 3-2-1 countdown
 const DRIFT_MAX = 0.42;                 // fastest drift, scale per second
-const LO = 0.12, HI = 0.94;               // the zone stays between these (a pedal at rest is no target)
+const LO = 0.12, HI = 0.94;               // the zone stays between these (a closed throttle is no target)
 const PHASES = ['drift', 'hold', 'jump', 'sweep', 'breathe'];
 
 const clamp = (x, a, b) => (x < a ? a : x > b ? b : x);
@@ -67,7 +67,7 @@ class RevKeeper {
 
     /** Half width of the zone at a level: from 11 % of the scale down to 5 %. */
     width(level) { return Math.max(0.05, 0.11 - 0.0075 * (level - 1)); }
-    /** How fast the zone moves, x1 at level 1 up to x1.8 (beyond that a pedal foot can't follow). */
+    /** How fast the zone moves, x1 at level 1 up to x1.8 (beyond that the knob can't follow). */
     speed() { return Math.min(1.8, 1 + 0.08 * (this.level - 1)); }
 
     _nextPhase(first) {
@@ -88,7 +88,7 @@ class RevKeeper {
             p.a1 = lerp(0.08, 0.16, r()); p.f1 = lerp(0.25, 0.45, r()) * this.speed();
             p.a2 = lerp(0.01, 0.025, r()); p.f2 = lerp(0.8, 1.2, r());
             p.ph = r() * Math.PI * 2;
-            // never faster than DRIFT_MAX (scale per second) at the peak: a foot has to follow it
+            // never faster than DRIFT_MAX (scale per second) at the peak: the knob has to follow it
             const v = 2 * Math.PI * (p.a1 * p.f1 + p.a2 * p.f2);
             if (v > DRIFT_MAX) { p.a1 *= DRIFT_MAX / v; p.a2 *= DRIFT_MAX / v; }
         } else if (kind === 'breathe') {

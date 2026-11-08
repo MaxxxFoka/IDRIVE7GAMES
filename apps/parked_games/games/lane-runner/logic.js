@@ -3,8 +3,8 @@
  * Lane Runner's rules, without drawing (testable with plain node).
  *
  * A road runs left to right across the screen, five lanes stacked top to bottom. The car stays near
- * the left edge; the steering angle sets where it is across the road (turn right = towards the
- * bottom, the car's right side). Rows of cones and barriers come towards it, always with a way
+ * the left edge and changes lane on the iDrive knob: each click moves it one lane (clockwise =
+ * towards the bottom, the car's right side). Rows of cones and barriers come towards it, always with a way
  * through; fuel cans refill the tank, which slowly empties. Three hits or an empty tank end the run.
  * The road gets faster all the time. Score: metres driven.
  */
@@ -12,7 +12,6 @@ const ROAD = { top: 96, bottom: 486 };                    // screen px (the HUD 
 const LANES = 5;
 const LANE_H = (ROAD.bottom - ROAD.top) / LANES;          // 78
 const CAR = { x: 200, w: 96, h: 46 };
-const STEER_RANGE = 90;                                    // degrees for the full road width (each way)
 const PX_PER_M = 10;
 const SPEED0 = 520, SPEED_MAX = 1500, SPEED_RAMP = 3.2;    // px/s, +px/s every second
 const FUEL_S = 40;                                         // seconds of fuel in a full tank
@@ -31,6 +30,7 @@ class Run {
         this.speed = SPEED0;
         this.y = laneY(2);                  // car centre
         this.target = this.y;
+        this.lane = 2;                      // the lane the car is heading for (the knob moves it)
         this.fuel = 1;
         this.lives = LIVES;
         this.hitT = -1e9;
@@ -44,14 +44,14 @@ class Run {
     }
     metres() { return Math.floor(this.dist / PX_PER_M); }
     kmh() { return Math.round(this.speed / PX_PER_M * 3.6); }
-    /** Where the steering puts the car (screen y): -90 deg = top lane's middle, +90 = bottom lane's. */
-    static yFor(steer) {
-        const f = clamp((steer || 0) / STEER_RANGE, -1, 1);
-        return laneY(2) + f * (laneY(LANES - 1) - laneY(2));
-    }
+    /** The middle of a lane (screen y), 0 = top; out of range = the nearest edge lane. */
+    static yFor(lane) { return laneY(clamp(Math.round(typeof lane === 'number' && isFinite(lane) ? lane : 2), 0, LANES - 1)); }
+    /** Change lane by n (+ = down, the knob turned clockwise); returns the new lane. */
+    shift(n) { this.lane = clamp(this.lane + Math.round(n || 0), 0, LANES - 1); return this.lane; }
     invulnerable() { return this.t - this.hitT < HIT_GRACE_MS; }
 
-    step(dtMs, steer) {
+    step(dtMs, lane) {
+        if (typeof lane === 'number') this.lane = clamp(Math.round(lane), 0, LANES - 1);
         this.events = [];
         if (this.over) return;
         const dt = clamp(dtMs, 0, 50) / 1000;
@@ -59,8 +59,8 @@ class Run {
         this.speed = Math.min(SPEED_MAX, this.speed + SPEED_RAMP * dt * 10 * (this.speed < 900 ? 1 : 0.6));
         const dx = this.speed * dt;
         this.dist += dx;
-        // the car follows the wheel quickly but not instantly (a real car doesn't jump)
-        this.target = Run.yFor(steer);
+        // the car glides to its lane quickly but not instantly (a real car doesn't jump)
+        this.target = Run.yFor(this.lane);
         const k = 1 - Math.exp(-dt * 12);
         this.y += (this.target - this.y) * k;
         // fuel
@@ -128,4 +128,4 @@ class Run {
     end(why) { if (!this.over) { this.over = true; this.why = why; this.events.push('over'); } }
 }
 
-module.exports = { Run, ROAD, LANES, LANE_H, CAR, STEER_RANGE, PX_PER_M, LIVES, laneY };
+module.exports = { Run, ROAD, LANES, LANE_H, CAR, PX_PER_M, LIVES, laneY };

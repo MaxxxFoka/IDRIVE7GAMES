@@ -5,15 +5,17 @@
  * The shell (this file) owns everything around a game; the games plug in as games/<id>/index.js
  * (the interface: GAMES.md). One canvas screen, MAIN (the kit's display drives one canvas screen
  * with the GPU renderer, touch and the controller), in two modes:
- *   menu  a tile per game (title, line, best score, WHEEL / PEDAL tags), tapped or chosen with the
- *         knob (the kit's page targets), and what the wheel and pedal can do right now.
+ *   menu  a tile per game (title, line, best score), tapped or chosen with the knob (the kit's
+ *         page targets).
  *   game  the round, the whole page. The header's tabs: GAMES (back to the menu, the round paused),
  *         the game's own, and the kit's SETTINGS. BACK leaves the app (the round pauses; it goes on
  *         when the app is opened again).
  *
- * Safety: the app plays only while the car stands (setting "Parked only", on by default). The
- * steering wheel counts only in P with the parking brake applied; the accelerator pedal also needs
- * the engine off (vehicle.js). Otherwise, and wherever the signals don't come, the knob stands in.
+ * Controls: every game is played with the iDrive knob (turn, press, push N / E / S / W) and the
+ * touchscreen. The steering wheel and the pedals are not read at all.
+ *
+ * Safety: the app plays only while the car stands (setting "Parked only", on by default; vehicle.js).
+ * As soon as the car moves the round pauses and the menu waits until it stops again.
  */
 const path = require('path');
 const mgu = require('./kit/mgu');
@@ -26,10 +28,8 @@ const S = require('./style');
 
 const W = 1600, H = 520;
 const SLOTS = 10;                                     // games on the menu (two rows of tiles)
-const KNOB_STEER_DEG = 6, KNOB_PEDAL_PCT = 5, STEER_LIMIT = 180;
 
 const mono = () => { const h = process.hrtime(); return h[0] * 1000 + h[1] / 1e6; };
-const has = (g, x) => (g.needs || []).indexOf(x) >= 0;
 const fmt = (g, n) => {
     if (n === null || n === undefined) return '-';
     if (g.score && typeof g.score.format === 'function') { try { return String(g.score.format(n)); } catch (e) { /* fall through */ } }
@@ -48,37 +48,21 @@ mgu.run({
         /* ---------- the car ---------- */
         const parked = Parked.watch(ctx, log);
         const car = new Vehicle();
-        const reversed = () => settings.get('steerDir') === 'reversed';
         const watch = (iface, handlers) => ctx.signals.watch(iface, '1', handlers, log, { pollMs: 2000 })
             .then((s) => log.info(iface.split('.').pop() + ': ' + (s.error ? 'error: ' + s.error : 'subscribed')))
             .catch((e) => log.warn(iface + ': ' + e));
         watch('de.bmw.infotainment.vehicle.Vehicle2', { statusCarSpeed2: (v) => car.speedRaw(v) });
-        watch('de.bmw.infotainment.vehicle.CDS', {
-            statusHandBrake: (v) => car.handbrakeRaw(v),
-            statusEngineSpeed2: (v) => car.rpmRaw(v),
-            statusEngineStatus: (v) => car.engineStatusRaw(v),
-        });
-        watch('de.bmw.infrastructure.VehicleInformation', {
-            statusGearboxDrive: (v) => car.gearboxRaw(v),
-            DataPowerTrain2: (v) => car.selectionRaw(v),
-        });
-        watch('de.bmw.chassis.SteeringAngle', {
-            ActualSteeringAngleDriver: (v) => car.steerRaw(v, reversed()),
-            actualSteeringAngleDriverNoCRC: (v) => car.steerRaw(v, reversed()),
-        });
-        watch('de.bmw.powertrain.AcceleratorPedal', { AngleAcceleratorPedal: (v) => car.pedalRaw(v) });
         const state = () => {
-            const st = car.state({ parkedOnly: settings.get('parkedOnly'), wheel: settings.get('wheel') });
+            const st = car.state({ parkedOnly: settings.get('parkedOnly') });
             // the kit's own parked check reads the same speed (and re-reads it every 2 s)
             if (settings.get('parkedOnly') !== false && parked.moving()) st.moving = true;
             return st;
         };
 
         /* ---------- a round ---------- */
-        let cur = null;          // { g, game, phase: 'play' | 'paused' | 'over', score, place, steer, pedal, err }
+        let cur = null;          // { g, game, phase: 'play' | 'paused' | 'over', score, place, err }
         const ctl = new Controller();
         function api(g, round) {
-            const st = () => state();
             return {
                 W, H, log: {
                     info: (...a) => log.info.apply(null, [g.id + ':'].concat(a)),
@@ -95,23 +79,10 @@ mgu.run({
                     round.place = scores.add(g, score);
                     log.info(g.id + ': round over, ' + fmt(g, score) + (round.place === 1 ? ' (new best)' : ''));
                 },
-                steering() {
-                    const s = st();
-                    if (s.wheel) return car.steerDeg;
-                    return has(g, 'wheel') ? round.steer : null;
-                },
-                steerSource() { const s = st(); return s.wheel ? 'wheel' : has(g, 'wheel') ? 'knob' : null; },
-                pedal() {
-                    const s = st();
-                    if (s.pedal) return car.pedalPct;
-                    if (!has(g, 'pedal')) return null;
-                    return has(g, 'wheel') ? (ctl.held('N') ? 100 : 0) : round.pedal;
-                },
-                pedalSource() { const s = st(); return s.pedal ? 'pedal' : has(g, 'pedal') ? 'knob' : null; },
             };
         }
         function newRound(g) {
-            const round = { g, game: null, phase: 'play', score: null, place: 0, steer: 0, pedal: 0, err: null };
+            const round = { g, game: null, phase: 'play', score: null, place: 0, err: null };
             cur = round;
             try { round.game = g.create(api(g, round)); } catch (e) { fail(round, e); }
             if (!round.game) fail(round, new Error('create() returned nothing'));
@@ -152,11 +123,6 @@ mgu.run({
                 if (ev.type === 'press' || ev.type === 'tap') action();
                 return;
             }
-            const g = cur.g;
-            if (ev.type === 'knob') {
-                if (has(g, 'wheel')) cur.steer = Math.max(-STEER_LIMIT, Math.min(STEER_LIMIT, cur.steer + ev.delta * KNOB_STEER_DEG));
-                else if (has(g, 'pedal')) cur.pedal = Math.max(0, Math.min(100, cur.pedal + ev.delta * KNOB_PEDAL_PCT));
-            } else if (ev.type === 'press' && has(g, 'wheel')) cur.steer = 0;
             call((gm) => gm.input && gm.input(ev));
         }
         // the controller: while the game holds it the renderer hands on what the HMI didn't get; the
@@ -181,21 +147,12 @@ mgu.run({
         // the header's tabs: 0 = GAMES (the menu), 1 = the round's game
         ctx.onTab((i) => { if (i === 0) toMenu(); else if (i === 1 && cur && !state().moving) { mode = 'game'; lastT = mono(); } });
         const tabs = () => ['Games'].concat(cur ? [cur.g.title] : []);
-        function status(st) {
-            if (st.moving) return 'Parked only: the games wait while the car moves';
-            const w = st.wheel ? 'Steering wheel ready' : 'Wheel: ' + st.why.wheel + ', the knob steers';
-            const p = st.pedal ? 'pedal ready' : 'pedal: ' + st.why.pedal;
-            return w + '  ·  ' + p;
-        }
-        const TAG = { wheel: 'Wheel', pedal: 'Pedal' };
         const lift = {};          // per tile: 0..1, eased towards selected
         let menuT0 = mono(), lastMenu = mono();
-        /** The car's state as two lit chips: what the wheel and the pedal do right now. */
+        /** One chip over the tiles: how to play, or why the games wait. */
         function statusChips(cv, st, y) {
             if (st.moving) { S.chip(cv, 'Parked only: the games wait while the car moves', 24, y, S.P.warn, { size: 15 }); return; }
-            let x = 24;
-            x += S.chip(cv, st.wheel ? 'Steering wheel ready' : 'Knob steers  (' + st.why.wheel + ')', x, y, st.wheel ? S.P.good : S.P.dim, { size: 15 }) + 10;
-            S.chip(cv, st.pedal ? 'Pedal ready' : 'Pedal: ' + st.why.pedal, x, y, st.pedal ? S.P.good : S.P.dim, { size: 15 });
+            S.chip(cv, 'Every game plays with the iDrive knob: turn, press and push', 24, y, S.P.dim, { size: 15 });
         }
         function drawMenu() {
             const t = ctx.theme(), st = state(), now = mono(), dt = Math.min(50, now - lastMenu);
@@ -236,11 +193,7 @@ mgu.run({
                     S.label(cv, 'Best', tx, y + th - 56, S.P.dim, { size: 13 });
                     cv.text(fmt(g, b), tx, y + th - 22, 30, hue, { font: 'bold' });
                 }
-                // inputs, bottom right
-                const tags = (g.needs || []).map((q) => TAG[q]).filter(Boolean);
-                let cx = tr;
-                if (going) cx -= S.chip(cv, 'Paused', cx, y + 16, S.P.gold, { align: 'right', solid: true, size: 13 }) + 8;
-                tags.reverse().forEach((s) => { cx -= S.chip(cv, s, cx, y + th - 46, S.P.dim, { align: 'right', size: 13 }) + 8; });
+                if (going) S.chip(cv, 'Paused', tr, y + 16, S.P.gold, { align: 'right', solid: true, size: 13 });
                 cv.target(x, y, tw, th, () => open(g), g.id, 18);
             });
             S.vignette(cv, 0, top, W, H - top, 0.5);
@@ -273,20 +226,11 @@ mgu.run({
             lastT = now;
             if (cur.phase === 'play') call((gm) => gm.update(dt));
             call((gm) => gm.draw(cv));
-            hint(cv, t);
             if (cur.phase === 'paused') { cur.pausedAt = cur.pausedAt || mono(); paused(cv, t); } else {
                 cur.pausedAt = 0;
                 if (cur.phase === 'over') result(cv, t);
             }
             return ui.image('MAIN_GFX', cv);
-        }
-        /** Where the wheel / pedal can't be used: one small chip, bottom left. */
-        function hint(cv, t) {
-            const g = cur.g, st = state();
-            let s = null;
-            if (has(g, 'wheel') && !st.wheel) s = 'Knob steers  (wheel: ' + st.why.wheel + ')';
-            else if (has(g, 'pedal') && !st.pedal) s = (has(g, 'wheel') ? 'Push up for the pedal' : 'Knob is the pedal') + '  (' + st.why.pedal + ')';
-            if (s) { cv.alpha(0.8); S.chip(cv, s, 16, H - 34, S.P.dim, { size: 12 }); cv.alpha(1); }
         }
         /** The card over a paused or ended round: the round dims and blurs back, the card springs in. */
         function card(cv, w, h, since) {

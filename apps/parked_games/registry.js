@@ -9,7 +9,6 @@
 const fs = require('fs');
 const path = require('path');
 
-const INPUTS = ['wheel', 'pedal'];
 const TOP_N = 5;
 
 /** Problems with a game module (GAMES.md), [] when it is fine. */
@@ -20,7 +19,8 @@ function check(m, folder) {
     else if (folder && m.id !== folder) bad.push('id "' + m.id + '" is not its folder name "' + folder + '"');
     if (typeof m.title !== 'string' || !m.title) bad.push('no title');
     if (typeof m.create !== 'function') bad.push('no create(api)');
-    if (m.needs !== undefined && (!Array.isArray(m.needs) || m.needs.some((x) => INPUTS.indexOf(x) < 0))) bad.push('needs: only ' + INPUTS.join(', '));
+    // every game is played with the knob (and touch): there are no other inputs to need
+    if (m.needs !== undefined && (!Array.isArray(m.needs) || m.needs.length)) bad.push('needs: must be [] (knob and touch only)');
     if (m.score !== undefined && (typeof m.score !== 'object' || m.score === null)) bad.push('score must be { unit, lower }');
     return bad;
 }

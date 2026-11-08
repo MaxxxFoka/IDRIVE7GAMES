@@ -113,36 +113,47 @@ test('a long stall does not teleport the game', () => {
 });
 
 /* ---------- the shell interface (GAMES.md) ---------- */
-function fakeApi(pedal) {
+function fakeApi() {
     const ends = [];
     const api = {
         W: 1600, H: 520, now: () => 0, random: seeded(42), log: { info() {}, warn() {}, error() {} },
         theme: () => ({}), best: () => 120, top: () => [], end: (s) => ends.push(s),
-        steering: () => null, steerSource: () => null,
-        pedal: () => pedal.v, pedalSource: () => pedal.src,
         store: { get() {}, set() {} },
     };
     return { api, ends };
+}
+/** Turn the knob towards a throttle level (0..1), one click at a time. */
+function knobTo(game, v) {
+    const want = Math.round(v * 25), have = Math.round(game.throttle * 25);
+    if (want !== have) game.input({ type: 'knob', delta: want > have ? 1 : -1 });
 }
 
 test('module shape', () => {
     assert.strictEqual(mod.id, 'rev-keeper');
     assert.ok(mod.title.length <= 16 && mod.blurb.length <= 28);
-    assert.deepStrictEqual(mod.needs, ['pedal']);
+    assert.deepStrictEqual(mod.needs, []);
     assert.strictEqual(mod.score.lower, false);
     assert.strictEqual(typeof mod.create, 'function');
 });
 
-test('plays through the api: pedal in %, end() called once with a whole score', () => {
-    const pedal = { v: null, src: null };
-    const { api, ends } = fakeApi(pedal);
+test('the knob is the throttle: 4 % a click, push up / down a fifth, clamped', () => {
+    const game = mod.create(fakeApi().api);
+    game.input({ type: 'knob', delta: 5 }); assert.ok(Math.abs(game.throttle - 0.2) < 1e-9);
+    game.input({ type: 'push', dir: 'N' }); assert.ok(Math.abs(game.throttle - 0.4) < 1e-9);
+    game.input({ type: 'push', dir: 'S' }); game.input({ type: 'push', dir: 'S' }); game.input({ type: 'push', dir: 'S' });
+    assert.strictEqual(game.throttle, 0);
+    game.input({ type: 'knob', delta: 99 }); assert.strictEqual(game.throttle, 1);
+});
+
+test('plays through the api: a knob player at 2 clicks a frame keeps up, end() once with a whole score', () => {
+    const { api, ends } = fakeApi();
     const game = mod.create(api);
-    for (let t = 0; t < 3000; t += 16) game.update(16);       // the countdown, pedal unknown = released
-    pedal.src = 'knob';
-    for (let t = 0; t < 20000; t += 16) { pedal.v = Math.round(game.g.zone.c * 20) * 5; game.update(16); }   // 5 % steps
+    for (let t = 0; t < 3000; t += 16) game.update(16);       // the countdown
+    let f = 0;
+    for (let t = 0; t < 20000; t += 16) { if (f++ % 3) knobTo(game, game.g.zone.c); game.update(16); }
     assert.strictEqual(ends.length, 0, 'a knob player on the zone ended the round');
     assert.ok(game.g.score > 100);
-    pedal.v = 100;
+    game.input({ type: 'knob', delta: 30 });
     for (let t = 0; t < 30000; t += 16) game.update(16);
     assert.strictEqual(ends.length, 1);
     assert.strictEqual(ends[0], Math.floor(ends[0]));
@@ -159,13 +170,12 @@ test('draws every state with only the documented canvas calls', () => {
             return (...a) => { if (k === 'text' && a[3] > 40 && /[^0-9 .x%-]/.test(a[0])) big.push(a[0]); return 10; };
         },
     });
-    const pedal = { v: 0, src: 'pedal' };
-    const { api } = fakeApi(pedal);
+    const { api } = fakeApi();
     const game = mod.create(api);
     game.draw(cv);                                               // countdown
-    for (let t = 0; t < 6000; t += 16) { pedal.v = game.g.zone.c * 100; game.update(16); }
+    for (let t = 0; t < 6000; t += 16) { knobTo(game, game.g.zone.c); game.update(16); }
     game.draw(cv); game.pause(); game.draw(cv); game.resume();
-    pedal.v = 100; for (let t = 0; t < 30000; t += 16) game.update(16);
+    game.input({ type: 'knob', delta: 30 }); for (let t = 0; t < 30000; t += 16) game.update(16);
     game.draw(cv);
     assert.strictEqual(game.g.state, 'over');
     assert.deepStrictEqual(big, [], 'words over size 40: ' + big.join(', '));

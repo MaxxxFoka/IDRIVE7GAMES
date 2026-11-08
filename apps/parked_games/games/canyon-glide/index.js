@@ -1,9 +1,9 @@
 'use strict';
 /**
- * Canyon Glide - fly a glider through an endless cave. Turn the steering wheel to climb and dive
- * (clockwise tips the nose down, as the glider flies to the right), press the accelerator to boost
- * (engine off). Without them: the shell's knob stand-in steers and push N boosts; taps above /
- * below the glider nudge it, and a knob press fires a short boost. One touch of the rock ends the round.
+ * Canyon Glide - fly a glider through an endless cave with the iDrive knob: turn it to climb and
+ * dive (clockwise tips the nose down, as the glider flies to the right; the trim stays where you
+ * leave it), press to level out, hold the controller up to boost. Taps above / below the glider
+ * nudge it too. One touch of the rock ends the round.
  *
  * Files: cave.js (the cave), input.js (controls), game.js (rules), draw.js (drawing),
  * autopilot.js (flies by itself: the tests use it), test.js.
@@ -13,7 +13,7 @@ const { Round } = require('./game');
 const { draw } = require('./draw');
 const look = require('./look');
 
-const FULL_STEER_DEG = 90;      // wheel angle for full climb / dive
+const HOW = { steer: 'Turn the knob to climb and dive, press to level out', boost: 'hold the controller up' };
 
 class Game {
     constructor(api) {
@@ -26,7 +26,7 @@ class Game {
             invert: !!(store && store.get('invert')),
             log: api.log,
         });
-        this.knob = 0; this.press = false; this.tap = null;
+        this.knob = 0; this.level = false; this.tap = null; this.boost = false;
         this.ended = false;
         this.fx = api.style ? new look.Fx(api.style) : null;
     }
@@ -34,25 +34,15 @@ class Game {
     input(ev) {
         if (!ev) return;
         if (ev.type === 'knob') this.knob += Number(ev.delta) || 0;
-        else if (ev.type === 'press') this.press = true;
+        else if (ev.type === 'press') this.level = true;
+        else if (ev.type === 'push') this.boost = ev.dir === 'N';
+        else if (ev.type === 'release') this.boost = false;
         else if (ev.type === 'tap') this.tap = { x: ev.x, y: ev.y };
     }
 
     frame() {
-        const api = this.api;
-        const deg = api.steering ? api.steering() : null, pct = api.pedal ? api.pedal() : null;
-        const steerKnob = api.steerSource && api.steerSource() === 'knob';
-        const pedalKnob = api.pedalSource && api.pedalSource() === 'knob';
-        const inp = {
-            steer: typeof deg === 'number' ? deg / FULL_STEER_DEG : null,
-            pedal: typeof pct === 'number' ? pct / 100 : null,
-            // the knob already turns the stand-in wheel: don't count its clicks twice
-            knob: steerKnob ? 0 : this.knob,
-            // a press re-centres the stand-in wheel; it boosts only when push N isn't the pedal
-            press: this.press && !pedalKnob,
-            tap: this.tap,
-        };
-        this.knob = 0; this.press = false; this.tap = null;
+        const inp = { knob: this.knob, level: this.level, boost: this.boost ? 1 : 0, tap: this.tap };
+        this.knob = 0; this.level = false; this.tap = null;
         return inp;
     }
 
@@ -63,15 +53,9 @@ class Game {
         if (this.round.over()) { this.ended = true; this.api.end(this.round.score()); }
     }
 
-    hints() {
-        const api = this.api, s = api.steerSource && api.steerSource(), p = api.pedalSource && api.pedalSource();
-        return {
-            steer: s === 'wheel' ? 'Turn the wheel: anticlockwise climbs, clockwise dives'
-                : s === 'knob' ? 'Turn the knob to climb and dive, press to level out'
-                    : 'Tap above or below the glider',
-            boost: p === 'pedal' ? 'accelerator pedal' : p === 'knob' ? 'push the controller up' : 'press the knob',
-        };
-    }
+    pause() { this.boost = false; }
+
+    hints() { return HOW; }
 
     draw(cv) {
         if (this.fx) look.draw(cv, this.round, this.api.style, this.fx, this.hints());
@@ -82,9 +66,9 @@ class Game {
 module.exports = {
     id: 'canyon-glide',
     title: 'Canyon Glide',
-    blurb: 'Glide the cave, pedal to boost',
+    blurb: 'Glide the endless cave',
     order: 30,
-    needs: ['wheel', 'pedal'],
+    needs: [],
     score: { unit: 'pts', lower: false },
     art: look.art,
     create(api) { return new Game(api); },

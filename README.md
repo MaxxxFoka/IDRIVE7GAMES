@@ -1,8 +1,8 @@
 <h1 align="center">Parked Games for BMW iDrive 7</h1>
 
 <p align="center">
-  <b>Six original arcade games for the BMW MGU head unit (iDrive 7), played with the iDrive knob, the touchscreen<br>
-  and, when the car is safely parked, the real steering wheel and accelerator pedal.</b>
+  <b>Six original arcade games for the BMW MGU head unit (iDrive 7), all played with the iDrive knob<br>
+  (the touchscreen works too). No steering wheel or pedals: the games never read them.</b>
 </p>
 
 <p align="center">
@@ -46,13 +46,11 @@ to BMW's apps, keeps your high scores, and pauses by itself the moment the car m
 ## The menu
 
 <p align="center">
-  <img src="docs/media/parked-games/menu.png" alt="The Parked Games menu: six tiles, each with a small animated scene, the game's title, a line about it, the best score and WHEEL / PEDAL tags" width="100%">
+  <img src="docs/media/parked-games/menu.png" alt="The Parked Games menu: six tiles, each with a small animated scene, the game's title, a line about it and the best score" width="100%">
 </p>
 
 One tile per game, each with its own little animated scene. Tap a tile, or turn the knob and
-press. The chips at the top say what the steering wheel and pedal can do right now; the tags on
-each tile say which games are built around them. Your best score shows on the tile once you have
-one. While a game runs, the header has three tabs: **GAMES** (back here, the round paused), the
+press. Your best score shows on the tile once you have one. While a game runs, the header has three tabs: **GAMES** (back here, the round paused), the
 game itself, and **SETTINGS**.
 
 ---
@@ -65,9 +63,9 @@ game itself, and **SETTINGS**.
   <img src="docs/media/parked-games/lane-runner.gif" alt="Lane Runner: a glowing car on a five-lane night highway weaving between orange cones and red barriers, picking up fuel cans" width="100%">
 </p>
 
-An endless night highway. **Steer with the steering wheel** between cones and barriers, and
-pick up fuel cans before the tank runs dry. Gentle steering, about 90° each way covers all five
-lanes, and the road gets faster the further you go. Three cars per run; the score is the
+An endless night highway. **Change lanes with the knob**, one click a lane (clockwise moves
+down, pushing the controller up or down works too), between cones and barriers, and pick up fuel
+cans before the tank runs dry. The road gets faster the further you go. Three cars per run; the score is the
 distance in metres.
 
 <p align="center">
@@ -81,11 +79,10 @@ distance in metres.
   <img src="docs/media/parked-games/paddle-duel.gif" alt="Paddle Duel: two glowing paddles on the left and right of a dark court, a ball with a purple trail flying between them" width="100%">
 </p>
 
-A two-player duel for the front seats: **the driver plays the left paddle with the steering
-wheel, the passenger the right one with the iDrive knob** (or by touching their half of the
-screen). Alone? The car plays the other side until the passenger joins. First to 7 wins; the
-high score is the longest rally. In a right-hand-drive car, push the controller right before
-the first serve and the driver's paddle moves to that side (remembered).
+You against the car: **turn the knob to move your paddle**, push up or down to slide it. A
+second player can take the car's paddle by touching that half of the screen. First to 7 wins;
+the high score is the longest rally. Push the controller right before the first serve to play
+from the right side instead (remembered).
 
 ### 🪂 Canyon Glide
 
@@ -93,10 +90,10 @@ the first serve and the driver's paddle moves to that side (remembered).
   <img src="docs/media/parked-games/canyon-glide.gif" alt="Canyon Glide: a white glider flying right through an amber-edged cave, past spikes, collecting green crystals" width="100%">
 </p>
 
-Fly a glider through an endless cave. **Turn the wheel to climb and dive** (clockwise tips the
-nose down) and **press the accelerator to boost** (engine off only). One touch of the rock ends
-the flight; crystals and distance add to the score. Without the wheel and pedal: the knob
-steers, pushing the controller up boosts, and taps above or below the glider nudge it.
+Fly a glider through an endless cave. **Turn the knob to climb and dive** (clockwise tips the
+nose down, and it stays trimmed where you leave it), **press to level out** and **hold the
+controller up to boost**. One touch of the rock ends the flight; crystals and distance add to
+the score. Taps above or below the glider nudge it too.
 
 ### 🔥 Rev Keeper
 
@@ -104,11 +101,12 @@ steers, pushing the controller up boosts, and taps above or below the glider nud
   <img src="docs/media/parked-games/rev-keeper.gif" alt="Rev Keeper: a rev bar from 0 to 8000 rpm with a moving green zone, the needle following it, a multiplier and engine strain meter" width="100%">
 </p>
 
-Pedal control as a game. **Hold the needle inside the green zone with the accelerator pedal**
-while the zone drifts, holds, sweeps and jumps (a ghost shows where it is about to jump). Staying
-in builds a multiplier up to ×8; straying builds engine strain, and at 100 % the engine blows.
-Every 12 seconds the zone gets narrower and faster. The real pedal is used only with the engine
-off; otherwise each knob click moves a virtual pedal by 5 %.
+Throttle control as a game. **The knob is the throttle**: each click clockwise opens it 4 %,
+anticlockwise closes it, and pushing the controller up or down moves it a fifth of the scale at
+once. **Hold the needle inside the green zone** while the zone drifts, holds, sweeps and jumps (a
+ghost shows where it is about to jump). Staying in builds a multiplier up to ×8; straying builds
+engine strain, and at 100 % the engine blows. Every 12 seconds the zone gets narrower and faster.
+The engine is only a picture: nothing is sent to the car.
 
 ### 🧱 Brick Breaker
 
@@ -143,19 +141,17 @@ four big buttons beside the well.
   <img src="docs/media/parked-games/menu-moving.png" alt="The menu while the car moves: a gold chip says 'Parked only: the games wait while the car moves', the tiles are dimmed, the open round shows PAUSED" width="100%">
 </p>
 
-The app is built so that it cannot be played on the move. The rules live in the shell
-([`apps/parked_games/vehicle.js`](apps/parked_games/vehicle.js)), so no game can get around
-them:
+The app is built so that it cannot be played on the move. The rule lives in the shell
+([`apps/parked_games/vehicle.js`](apps/parked_games/vehicle.js)), so no game can get around it:
+the games play only while the car stands still (3 km/h or less). As soon as it moves, the round
+pauses, the app drops back to the menu and nothing opens until the car stops again.
 
-| | Needs |
-|---|---|
-| **Any game** | The car standing still (3 km/h or less). As soon as it moves, the round pauses, the app drops back to the menu and nothing opens until the car stops again. This is the *Parked only* setting, on by default. |
-| **Steering wheel as a controller** | Standing still **and** gear in **P** **and** the **parking brake applied**. |
-| **Accelerator pedal as a controller** | All of the above **and the engine off**, so pressing it can never rev the engine. |
+The centre screen sits in the driver's view and the iDrive knob is in reach of the driver's seat,
+so this stays the case even though the games now use only the knob.
 
-Whenever the wheel or pedal isn't allowed, or its signal doesn't arrive, the iDrive knob stands
-in, so every game is still playable. The car's own BACK, MENU and OPTION buttons always stay with
-the HMI: BACK leaves the app and the round waits until you come back.
+The games read nothing but the car's speed and the iDrive controller: not the steering wheel, not
+the pedals, not the gear or the engine. The car's own BACK, MENU and OPTION buttons always stay
+with the HMI: BACK leaves the app and the round waits until you come back.
 
 There is no video, no internet and nothing on the driver's cluster or head-up display: the games
 only ever draw on the centre screen.
@@ -164,17 +160,18 @@ only ever draw on the centre screen.
 
 ## Controls at a glance
 
-| Game | Built for | Knob | Controller push | Touch |
-|---|---|---|---|---|
-| Lane Runner | Wheel | Turn: steer (6° a click). Press: centre | | |
-| Paddle Duel | Wheel + knob | Turn: passenger's paddle | Left/right before the serve: driver's side | Drag on your half |
-| Canyon Glide | Wheel + pedal | Turn: climb / dive. Press: short boost | Up: boost | Tap above / below the glider |
-| Rev Keeper | Pedal | Turn: virtual pedal (5 % a click) | | |
-| Brick Breaker | Knob / touch | Turn: paddle. Press: launch | Up / down: long move. Right: launch | Drag or tap to place the paddle |
-| Block Drop | Knob / touch | Turn: move. Press: rotate | Up: swap colours. Down: drop. Left / right: move | Rotate / Left / Right / Drop buttons, tap the well to swap |
+Every game is played with the iDrive knob alone; touch is an extra.
 
-**Settings** (the SETTINGS tab): *Parked only*, *Steering wheel and pedal* (in P with the parking
-brake on, or off: knob only), *Steering direction* (normal or reversed), and a *Colour theme*.
+| Game | Knob | Controller push | Touch (optional) |
+|---|---|---|---|
+| Lane Runner | Turn: change lane (one a click) | Up / down: change lane | |
+| Paddle Duel | Turn: your paddle | Up / down: slide it. Left / right before the serve: your side | A second player drags on the other half |
+| Canyon Glide | Turn: climb / dive (stays trimmed). Press: level out | Hold up: boost | Tap above / below the glider |
+| Rev Keeper | Turn: throttle (4 % a click) | Up / down: throttle ±20 % | |
+| Brick Breaker | Turn: paddle. Press: launch | Up / down: long move. Right: launch | Drag or tap to place the paddle |
+| Block Drop | Turn: move. Press: rotate | Up: swap colours. Down: drop. Left / right: move | Rotate / Left / Right / Drop buttons, tap the well to swap |
+
+**Settings** (the SETTINGS tab): *Parked only* and a *Colour theme*.
 
 ---
 
@@ -192,8 +189,7 @@ node kit/tools/emu.js parked_games                       # the live emulator: ht
 
 The emulator draws every frame with the car's own render engine, compiled to WebAssembly. Click
 the tiles, use the mouse wheel or `[` `]` as the knob, `Enter` to press, the arrow keys to push.
-Under *Vehicle signals → Manual* you can set speed, gear, parking brake, steering and pedal and
-watch the safety rules switch the wheel and pedal on and off. More in
+Under *Vehicle signals → Manual* you can raise the speed above 3 km/h and watch the games pause. More in
 [docs/emulator.md](docs/emulator.md).
 
 Run the tests (every game played headless against the game interface):
@@ -240,9 +236,8 @@ After one or two minutes **Parked Games** appears under **Apps**. Everything is 
 `deploy\push-to-car.ps1`; without a network, copy `dist/mgu-custom-apps/` to a USB stick and run
 `sh deploy-car.sh check` and `install` on the unit.
 
-**Status:** the games run in the emulator and the tests; on the car, two things are still to be
-confirmed: which way the steering angle signal counts (there is a *Steering direction* setting
-just in case) and whether the steering and pedal signals keep updating with the engine off.
+**Status:** the games run in the emulator and the tests; the knob-only controls still want a
+round of play on the car.
 
 ---
 

@@ -7,7 +7,7 @@
  *   node kit/tools/test_parked_games.js lane-runner one game
  *
  * Each game is played headless: created with a fake api, fed knob / press / push / touch events and
- * steering sweeps for 3 minutes of game time, drawn every frame on a canvas that checks its calls.
+ * for 3 minutes of game time, drawn every frame on a canvas that checks its calls.
  */
 const assert = require('assert');
 const fs = require('fs');
@@ -24,48 +24,17 @@ function test(name, fn) {
     try { fn(); console.log('ok   ' + name); } catch (e) { failed++; console.log('FAIL ' + name + '\n     ' + (e && e.stack || e).split('\n').slice(0, 4).join('\n     ')); }
 }
 
-/* ---------- vehicle.js: what the car allows ---------- */
-test('vehicle: a bench with no signals is parked, the wheel and pedal stay off', () => {
-    const s = new Vehicle().state();
-    assert.strictEqual(s.moving, false); assert.strictEqual(s.wheel, false); assert.strictEqual(s.pedal, false);
+/* ---------- vehicle.js: when the games may play ---------- */
+test('vehicle: a bench with no signals is parked', () => {
+    assert.strictEqual(new Vehicle().state().moving, false);
 });
-test('vehicle: wheel needs standing, P and the parking brake', () => {
+test('vehicle: moving above 3 km/h pauses the games, unless Parked only is off', () => {
     const v = new Vehicle();
-    v.speedRaw({ speedVehicleCentreOfGravity: 0 }); v.steerRaw({ actualValueSteeringAngleDriver: 0 });
-    assert.strictEqual(v.state().why.wheel, 'needs gear P');
-    v.gearboxRaw({ statusActualStageDrive: 'P' });
-    assert.strictEqual(v.state().why.wheel, 'needs the parking brake');
-    v.handbrakeRaw({ statusContactHandBrake: 'HANDBREMSE_ANGEZOGEN' });
-    assert.strictEqual(v.state().wheel, true);
-    v.speedRaw({ speedVehicleCentreOfGravity: 10 * 64 });
-    const s = v.state();
-    assert.strictEqual(s.moving, true); assert.strictEqual(s.wheel, false);
+    v.speedRaw({ speedVehicleCentreOfGravity: 0 }); assert.strictEqual(v.state().moving, false);
+    v.speedRaw({ speedVehicleCentreOfGravity: 3 * 64 }); assert.strictEqual(v.state().moving, false);
+    v.speedRaw({ speedVehicleCentreOfGravity: 10 * 64 }); assert.strictEqual(v.state().moving, true);
     assert.strictEqual(v.state({ parkedOnly: false }).moving, false);
-    v.speedRaw({ speedVehicleCentreOfGravity: 0 });
-    assert.strictEqual(v.state({ wheel: 'off' }).wheel, false);
-});
-test('vehicle: DataPowerTrain2 gives P too', () => {
-    const v = new Vehicle();
-    v.selectionRaw({ statusGearSelectionDrive: 3 }); assert.strictEqual(v.sel, 'P');
-    v.selectionRaw({ statusGearSelectionDrive: '_4' }); assert.strictEqual(v.sel, 'D');
-});
-test('vehicle: pedal needs the engine off', () => {
-    const v = new Vehicle();
-    v.speed(0); v.stage('P'); v.handbrake(true); v.steerRaw(0); v.pedalRaw({ actualValueAngleAcceleratorPedal: 2000 });
-    assert.strictEqual(v.pedalPct, 50);
-    v.rpmRaw({ actualValueRPMEngineCrankshaft: 800 * 4 });
-    assert.strictEqual(v.state().why.pedal, 'needs the engine off');
-    v.engineStatusRaw({ statusEngineRunDrive: 'MOTOR_AUS' });
-    assert.strictEqual(v.state().pedal, true);
-    v.engineStatusRaw({ statusEngineRunDrive: 2 });
-    assert.strictEqual(v.state().pedal, false);
-});
-test('vehicle: steering + = right, signed 16 bit, reversible', () => {
-    const v = new Vehicle();
-    v.steerRaw({ actualValueSteeringAngleDriver: 65536 - 1000 });       // raw -1000 = 43.95 deg right
-    assert.ok(Math.abs(v.steerDeg - 43.95) < 0.01, v.steerDeg);
-    v.steerRaw({ actualValueSteeringAngleDriver: 1000 }, true);
-    assert.ok(Math.abs(v.steerDeg - 43.95) < 0.01, v.steerDeg);
+    v.speedRaw({ speedVehicleCentreOfGravity: 65535 }); assert.strictEqual(v.state().moving, true, 'an invalid speed keeps the last one');
 });
 
 /* ---------- controls.js ---------- */
@@ -108,7 +77,8 @@ test('registry: store per game', () => {
 test('registry: check() finds a bad module', () => {
     assert.ok(check({ id: 'x', title: 'X', create() {} }, 'x').length === 0);
     assert.ok(check({ id: 'x', title: 'X', create() {} }, 'y').length > 0);
-    assert.ok(check({ id: 'x', title: 'X', create() {}, needs: ['knob'] }, 'x').length > 0);
+    assert.ok(check({ id: 'x', title: 'X', create() {}, needs: [] }, 'x').length === 0);
+    assert.ok(check({ id: 'x', title: 'X', create() {}, needs: ['wheel'] }, 'x').length > 0, 'no wheel or pedal games any more');
     assert.ok(check({ id: 'X_1', title: 'X' }, 'X_1').length >= 2);
 });
 
@@ -138,14 +108,13 @@ function fakeCanvas() {
 const THEME = { bg: '#000000', text: '#ffffff', dim: '#888888', accent: '#ff0000', warn: '#ffaa00', crit: '#ff0000', cold: '#3399ff', panel: '#1a1d22' };
 
 function play(g, opts) {
-    let t = 0, ended = null, steer = 0, pedal = 0, seed = opts.seed;
+    let t = 0, ended = null, seed = opts.seed;
     const rnd = () => { seed = (seed * 1103515245 + 12345) & 0x7fffffff; return seed / 0x80000000; };
     const saved = {};
     const api = {
         W: 1600, H: 520, now: () => t, random: rnd, log: { info() {}, warn() {}, error() {} }, theme: () => THEME, style: require(path.join(APP, 'style')),
         best: () => null, top: () => [], store: { get: (k) => saved[k], set: (k, v) => { saved[k] = JSON.parse(JSON.stringify(v)); } },
         end(score) { assert.strictEqual(ended, null, 'end() called twice'); assert.ok(typeof score === 'number' && isFinite(score), 'end(score): a number'); ended = score; },
-        steering: () => steer, steerSource: () => opts.source, pedal: () => pedal, pedalSource: () => opts.source,
     };
     const game = g.create(api);
     assert.ok(game && typeof game.update === 'function' && typeof game.draw === 'function', 'create(api) returns { update, draw }');
@@ -154,7 +123,6 @@ function play(g, opts) {
         { type: 'touch', phase: 'up', x: 900, y: 320 }, { type: 'tap', x: 400, y: 260 }];
     let frames = 0;
     for (; t < opts.ms; t += 16) {
-        steer = Math.sin(t / 1300) * 100; pedal = 50 + Math.sin(t / 900) * 50;
         if (frames % 7 === 0 && game.input) game.input(evs[(frames / 7) % evs.length]);
         if (frames === 300 && game.pause) { game.pause(); if (game.resume) game.resume(); }
         if (ended === null) game.update(16);
@@ -190,10 +158,17 @@ games.filter((g) => !only || g.id === only).forEach((g) => {
         const S = require(path.join(APP, 'style'));
         for (let ms = 0; ms < 20000; ms += 333) g.art(fakeCanvas(), 100, 100, 184, 184, S, ms);
     });
-    ['knob', 'wheel'].forEach((source) => test(g.id + ': plays 3 minutes headless (' + source + ')', () => {
-        const r = play(g, { ms: 180000, seed: 7, source });
+    test(g.id + ': is played with the knob and touch only (needs: [])', () => assert.deepStrictEqual(g.needs, []));
+    test(g.id + ': uses no steering or pedal api', () => {
+        fs.readdirSync(path.join(APP, 'games', g.id)).filter((f) => f.endsWith('.js')).forEach((f) => {
+            const src = fs.readFileSync(path.join(APP, 'games', g.id, f), 'utf8');
+            assert.ok(!/api\.(steering|steerSource|pedal|pedalSource)\b/.test(src), f + ': reads the wheel or pedal');
+        });
+    });
+    test(g.id + ': plays 3 minutes headless', () => {
+        const r = play(g, { ms: 180000, seed: 7 });
         assert.ok(r.frames > 10);
-    }));
+    });
 });
 
 fs.rmSync(tmp, { recursive: true, force: true });

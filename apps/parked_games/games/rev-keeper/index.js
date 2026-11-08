@@ -2,9 +2,9 @@
 /**
  * Rev Keeper - a Parked Games game (interface: apps/parked_games/GAMES.md).
  *
- * Keep the needle inside a green zone that keeps moving, using only accelerator pedal pressure.
- * The shell gives the real pedal only in P with the parking brake on and the engine off; anywhere
- * else it stands in with the knob (5 % a click), so the game plays everywhere.
+ * Keep the needle inside a green zone that keeps moving, on a throttle you work with the iDrive
+ * knob: each click clockwise opens it by 4 %, anticlockwise closes it; pushing the controller up
+ * or down moves it a fifth of the scale at once (for the jumps). It stays where you leave it.
  *
  * Rules: logic.js. Picture: draw.js. Tests: node apps/parked_games/games/rev-keeper/test.js
  */
@@ -12,10 +12,14 @@ const { RevKeeper } = require('./logic');
 const { draw } = require('./draw');
 const look = require('./look');
 
+const KNOB_STEP = 0.04, PUSH_STEP = 0.2;
+const clamp01 = (x) => Math.max(0, Math.min(1, x));
+
 class Game {
     constructor(api) {
         this.api = api;
         this.paused = false;
+        this.throttle = 0;                // 0..1, set by the knob
         this.ended = false;
         this.g = new RevKeeper({
             random: api.random,
@@ -25,21 +29,23 @@ class Game {
     }
 
     update(dtMs) {
-        const p = this.api.pedal();
-        this.g.setInput(p == null ? 0 : p / 100);
+        this.g.setInput(this.throttle);
         this.g.update(dtMs / 1000);
         if (this.fx) this.fx.update(dtMs, this.g);
     }
 
     draw(cv) {
         const best = this.api.best();
-        const view = { best: best == null ? null : best, source: this.api.pedalSource(), paused: this.paused };
+        const view = { best: best == null ? null : best, source: 'knob', paused: this.paused };
         if (this.fx) look.draw(cv, this.g, this.api.style, this.fx, view);
         else draw(cv, this.g, view);
     }
 
-    // the pedal is read in update; the knob is the shell's pedal stand-in, so no events are needed
-    input() {}
+    input(ev) {
+        if (this.paused || this.g.state === 'over') return;
+        if (ev.type === 'knob') this.throttle = clamp01(this.throttle + ev.delta * KNOB_STEP);
+        else if (ev.type === 'push' && (ev.dir === 'N' || ev.dir === 'S')) this.throttle = clamp01(this.throttle + (ev.dir === 'N' ? PUSH_STEP : -PUSH_STEP));
+    }
     pause() { this.paused = true; }
     resume() { this.paused = false; }
 }
@@ -49,7 +55,7 @@ module.exports = {
     title: 'Rev Keeper',
     blurb: 'Rev into the moving green',
     order: 40,
-    needs: ['pedal'],
+    needs: [],
     score: { unit: 'pts', lower: false },
     art: look.art,
     create(api) { return new Game(api); },

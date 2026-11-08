@@ -19,7 +19,7 @@ const clamp01 = (x) => (x < 0 ? 0 : x > 1 ? 1 : x);
 const bold = (extra) => Object.assign({ font: 'bold' }, extra);
 const num = (extra) => Object.assign({ font: 'num' }, extra);
 
-/** view: { best: number | null, source: 'pedal' | 'knob' | null, paused: bool } */
+/** view: { best: number | null, source: 'knob', paused: bool } */
 function draw(cv, g, view) {
     view = view || {};
     cv.fillRect(0, 0, W, H, C.bg);
@@ -31,8 +31,7 @@ function draw(cv, g, view) {
 
 function hud(cv, g, view) {
     cv.text('REV KEEPER', 48, 72, 30, C.text, bold());
-    const src = view.source === 'knob' ? 'KNOB (PEDAL STAND-IN)' : view.source === 'pedal' ? 'ACCELERATOR PEDAL' : 'NO INPUT';
-    cv.text(src, 48, 102, 20, view.source ? C.dim : C.warn, bold());
+    cv.text('KNOB: THROTTLE', 48, 102, 20, C.dim, bold());
     cv.text(String(Math.floor(g.score)), W / 2, 92, 64, C.text, num({ align: 'center' }));
     if (view.best != null) cv.text('BEST ' + view.best, W / 2, 120, 20, C.dim, bold({ align: 'center' }));
     const m = g.mult, mc = m >= 6 ? C.zoneHot : m >= 3 ? C.zone : C.text;

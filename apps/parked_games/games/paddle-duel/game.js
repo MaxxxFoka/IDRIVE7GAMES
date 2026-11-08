@@ -1,11 +1,9 @@
 'use strict';
 /**
- * Paddle Duel - a two-player ball-and-paddle game for a parked car.
+ * Paddle Duel - a ball-and-paddle duel for a parked car.
  *
- *   the driver's paddle    the steering wheel: the wheel's angle IS the paddle's position
- *                          (a small, gentle range, about +-90 degrees by default)
- *   the passenger's paddle the iDrive knob: each click moves it, push up / down slides it
- *   either side            can be the car (CPU) instead, for one player
+ *   your paddle            the iDrive knob: each click moves it, push up / down slides it
+ *   the other paddle       the car (CPU), or a second player with a finger on that half of the screen
  *
  * What makes it more than "hit it back":
  *   - where the ball meets the paddle sets the angle it leaves at (the edge sends it steep)
@@ -58,7 +56,7 @@ class Paddle {
         this.side = side;                                       // 'L' or 'R'
         this.x = side === 'L' ? PADDLE.inset : W - PADDLE.inset;
         this.y = MID; this.target = MID; this.vy = 0;
-        this.ctl = 'cpu';                                       // 'wheel' | 'knob' | 'cpu'
+        this.ctl = 'cpu';                                       // 'knob' | 'touch' | 'cpu'
         this.score = 0;
         this.tilt = 0;                                          // -1 up, +1 down (knob pushed)
         // cpu
@@ -77,17 +75,15 @@ class Paddle {
 class PaddleDuel {
     /**
      * opts: { target: points to win (7), bumper: bool (true), cpu: 'easy'|'normal'|'hard',
-     *         left: 'wheel'|'knob'|'cpu', right: 'wheel'|'knob'|'cpu',
-     *         wheelRange: degrees for full travel (90),
-     *         invertWheel: bool, knobStep: px per click (34), random: () => 0..1 }
+     *         left: 'knob'|'touch'|'cpu', right: 'knob'|'touch'|'cpu',
+     *         knobStep: px per click (34), random: () => 0..1 }
      */
     constructor(opts) {
-        this.o = Object.assign({ target: 7, bumper: true, cpu: 'normal', left: 'wheel', right: 'knob',
-            wheelRange: 90, invertWheel: false, knobStep: 34, random: Math.random }, opts || {});
+        this.o = Object.assign({ target: 7, bumper: true, cpu: 'normal', left: 'knob', right: 'cpu',
+            knobStep: 34, random: Math.random }, opts || {});
         this.rnd = this.o.random;
         this.L = new Paddle('L'); this.R = new Paddle('R');
         this.L.ctl = this.o.left; this.R.ctl = this.o.right;
-        this.wheelZero = 0; this.wheelDeg = null; this.wheelSeen = false;
         this.t = 0;
         this.ball = { x: W / 2, y: MID, vx: 0, vy: 0, spin: 0, speed: SPEED.start, hot: false };
         this.trail = [];
@@ -109,21 +105,16 @@ class PaddleDuel {
         const lv = CPU_LEVEL[this.o.cpu] || CPU_LEVEL.normal;
         [this.L, this.R].forEach((p) => { p.vmax = p.ctl === 'cpu' ? lv.vmax : PADDLE_VMAX; });
     }
-    /** change who plays a side mid-game (e.g. the wheel signal never came: the car takes over) */
+    /** change who plays a side mid-game (e.g. a second player takes over from the car) */
     setControl(side, ctl) { this[side].ctl = ctl; this.applyLevel(); }
     label(side) {
         const l = this.names && this.names[side];
         if (l) return l;
         const c = this[side].ctl;
-        return c === 'wheel' ? 'DRIVER  ·  WHEEL' : c === 'knob' ? 'PASSENGER  ·  KNOB' : 'CAR  ·  CPU';
+        return c === 'knob' ? 'YOU  ·  KNOB' : c === 'touch' ? 'PLAYER 2  ·  TOUCH' : 'CAR  ·  CPU';
     }
 
     /* ---------- input ---------- */
-    /** steering wheel angle in degrees (+ = clockwise), or null when the signal is lost */
-    steer(deg) {
-        if (typeof deg !== 'number' || !isFinite(deg)) { this.wheelDeg = null; return; }
-        this.wheelDeg = deg; this.wheelSeen = true;
-    }
     /** knob turned by n clicks (+ = clockwise = paddle down) */
     knob(n) {
         const p = this.byCtl('knob');
@@ -148,8 +139,6 @@ class PaddleDuel {
         this.L.score = 0; this.R.score = 0;
         this.rally = 0; this.longest = 0; this.hits = 0;
         this.bumperOn = false; this.winner = null; this.lastPoint = null;
-        // the wheel's angle right now counts as centre: the car may stand with its wheels turned
-        if (this.wheelDeg !== null) this.wheelZero = this.wheelDeg;
         this.serve(this.rnd() < 0.5 ? 'L' : 'R');
     }
     serve(to) {
@@ -186,22 +175,12 @@ class PaddleDuel {
         if (!(dt > 0)) return;
         dt = Math.min(dt, 0.1);
         this.t += dt;
-        // inputs that act even while paused or between points: the paddles follow their players
-        this.applyWheel();
         if (this.paused) return;
         const n = Math.ceil(dt / (1 / 240));
         const h = dt / n;
         for (let i = 0; i < n; i++) this.tick(h);
         this.flash = Math.max(0, this.flash - dt * 3);
         this.bumperFlash = Math.max(0, this.bumperFlash - dt * 3);
-    }
-    applyWheel() {
-        const p = this.byCtl('wheel');
-        if (!p || this.wheelDeg === null) return;
-        let a = this.wheelDeg - this.wheelZero;
-        if (Math.abs(a) < 1.5) a = 0;                 // dead zone: a hand resting on the wheel
-        const k = clamp(a / Math.max(10, this.o.wheelRange), -1, 1) * (this.o.invertWheel ? -1 : 1);
-        p.setTarget(MID + k * travel());
     }
     tick(h) {
         this.cpu(this.L, h); this.cpu(this.R, h);
@@ -371,8 +350,6 @@ class PaddleDuel {
         if (this.hint && this.hits === 0 && this.L.score + this.R.score === 0) {
             cv.text(this.hint, W / 2, COURT.bottom - 18, 22, dim, { font: 'bold', align: 'center' });
         }
-        const lost = this.wheelLost();
-        if (lost) cv.text('NO STEERING SIGNAL: THE CAR PLAYS THIS SIDE', lost === 'L' ? W * 0.25 : W * 0.75, COURT.bottom - 14, 18, dim, { font: 'bold', align: 'center', spacing: 1 });
         return cv;
     }
     drawPaddle(cv, p, c) {
@@ -382,11 +359,9 @@ class PaddleDuel {
         cv.roundRect(x, y, PADDLE.w, PADDLE.h, 8, c);
     }
     lastHitSide() { return this.ball.vx > 0 ? 'L' : 'R'; }
-    /** the side the wheel should play that the car took over (no steering signal), or null */
-    wheelLost() { return this.o.left === 'wheel' && this.L.ctl === 'cpu' ? 'L' : this.o.right === 'wheel' && this.R.ctl === 'cpu' ? 'R' : null; }
     winnerName() {
         const c = this[this.winner].ctl;
-        return c === 'wheel' ? 'DRIVER' : c === 'knob' ? 'PASSENGER' : 'THE CAR';
+        return c === 'knob' ? 'YOU' : c === 'touch' ? 'PLAYER 2' : 'THE CAR';
     }
 }
 

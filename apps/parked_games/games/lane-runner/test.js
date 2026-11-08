@@ -1,17 +1,22 @@
 'use strict';
 // node apps/parked_games/games/lane-runner/test.js
 const assert = require('assert');
-const { Run, LANES, STEER_RANGE, laneY } = require('./logic');
+const { Run, LANES, laneY } = require('./logic');
 
 function rng(seed) { return () => { seed = (seed * 1103515245 + 12345) & 0x7fffffff; return seed / 0x80000000; }; }
-const steerFor = (lane) => (lane - (LANES - 1) / 2) / ((LANES - 1) / 2) * STEER_RANGE;
 
-// the wheel maps to the road: -90 = top lane, 0 = middle, +90 = bottom, clamped beyond
-assert.strictEqual(Run.yFor(0), laneY(2));
-assert.strictEqual(Run.yFor(-STEER_RANGE), laneY(0));
-assert.strictEqual(Run.yFor(STEER_RANGE), laneY(LANES - 1));
-assert.strictEqual(Run.yFor(400), laneY(LANES - 1));
+// lanes map to the road, clamped at the edges; knob clicks move one lane each
+assert.strictEqual(Run.yFor(2), laneY(2));
+assert.strictEqual(Run.yFor(0), laneY(0));
+assert.strictEqual(Run.yFor(9), laneY(LANES - 1));
 assert.strictEqual(Run.yFor(null), laneY(2));
+{
+    const r = new Run(rng(1));
+    assert.strictEqual(r.lane, 2);
+    assert.strictEqual(r.shift(1), 3); assert.strictEqual(r.shift(5), LANES - 1); assert.strictEqual(r.shift(-9), 0);
+    for (let t = 0; t < 1000; t += 16) r.step(16);
+    assert.ok(Math.abs(r.y - laneY(0)) < 1, 'the car glides into its lane');
+}
 
 // every row leaves a lane open
 for (let s = 1; s < 30; s++) {
@@ -47,7 +52,7 @@ function drive(seed, smart, ms) {
                 }
             }
         }
-        r.step(16, steerFor(lane));
+        r.step(16, lane);
         assert.ok(r.dist >= last); last = r.dist;
     }
     return r;
@@ -60,7 +65,7 @@ assert.ok(survived >= 8, 'a careful driver should get far (' + survived + '/10)'
 
 // an empty tank ends the run
 const dry = new Run(rng(1));
-dry.fuel = 0.001; dry.step(50, 0);
+dry.fuel = 0.001; dry.step(50);
 assert.ok(dry.over && dry.why === 'fuel');
 
 console.log('lane-runner: all passed');
