@@ -50,10 +50,10 @@ to BMW's apps, keeps your high scores, and pauses by itself the moment the car m
 </p>
 
 One tile per game, each with its own little animated scene. Tap a tile, or turn the knob and
-press. Your best score shows on the tile once you have one. While a game runs, the header has three tabs: **GAMES** (back here, the round paused), the
-game itself, and **SETTINGS**, for the touchscreen. During a game the knob belongs to the game
-alone, so it can't wander onto the tabs and close it: **hold the knob pressed** to pause, then
-turn to *Games menu* and press to go back here.
+press. Your best score shows on the tile once you have one. While a game runs, the header has two tabs: **GAMES** (back here, the round paused) and
+the game itself, for the touchscreen. During a game the knob belongs to the game alone, so it
+can't wander onto the tabs and close it: **hold the knob pressed** to pause, then turn to *Games
+menu* and press to go back here.
 
 ---
 
@@ -207,7 +207,7 @@ Every game is played with the iDrive knob alone; touch is an extra.
 | Sketchpad | Turn: choose a tool, press: pick it. On the page: press = pen down / up, turn = fine steps | Move between tools; right off the toolbar = pen on the page; hold to move the pen | Draw with a finger, tap the tools |
 | Chess | Turn: choose a piece, then its square. Press: pick it up / play | Move the cursor a square; right of the board: Take back, Resign | Tap a piece, then its square, or drag it. Two players: one on the knob, one on touch |
 
-**Settings** (the SETTINGS tab): a *Colour theme*. The parked lock has no setting: it is always on.
+There are no settings: the look is fixed (Night Circuit) and the parked lock is always on.
 
 ---
 

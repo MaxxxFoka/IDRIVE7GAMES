@@ -7,9 +7,9 @@
  * with the GPU renderer, touch and the controller), in two modes:
  *   menu  a tile per game (title, line, best score), tapped or chosen with the knob (the kit's
  *         page targets).
- *   game  the round, the whole page. The header's tabs: GAMES (back to the menu, the round paused),
- *         the game's own, and the kit's SETTINGS. BACK leaves the app (the round pauses; it goes on
- *         when the app is opened again). While a game is on screen the app holds the controller:
+ *   game  the round, the whole page. The header's tabs: GAMES (back to the menu, the round paused)
+ *         and the game's own (the app has no settings). BACK leaves the app (the round pauses; it
+ *         goes on when the app is opened again). While a game is on screen the app holds the controller:
  *         every turn, press and push is the game's, so the knob can't wander onto the header's tabs
  *         and close the game. A long press pauses; the pause card's "Games menu" (turn to it, press)
  *         goes back to the menu.

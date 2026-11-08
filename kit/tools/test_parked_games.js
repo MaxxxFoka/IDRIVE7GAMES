@@ -15,7 +15,7 @@ const os = require('os');
 const path = require('path');
 
 const APP = path.join(__dirname, '..', '..', 'apps', 'parked_games');
-const { Vehicle } = require(path.join(APP, 'vehicle'));
+const { Vehicle, MAX_KMH } = require(path.join(APP, 'vehicle'));
 const { Controller } = require(path.join(APP, 'controls'));
 const { load, check, Scores, Store } = require(path.join(APP, 'registry'));
 
@@ -28,18 +28,18 @@ function test(name, fn) {
 test('vehicle: a bench with no signals is parked', () => {
     assert.strictEqual(new Vehicle().state().moving, false);
 });
-test('vehicle: moving above 3 km/h pauses the games, always', () => {
+test('vehicle: moving above MAX_KMH pauses the games, always', () => {
     const v = new Vehicle();
     v.speedRaw({ speedVehicleCentreOfGravity: 0 }); assert.strictEqual(v.state().moving, false);
-    v.speedRaw({ speedVehicleCentreOfGravity: 3 * 64 }); assert.strictEqual(v.state().moving, false);
-    v.speedRaw({ speedVehicleCentreOfGravity: 10 * 64 }); assert.strictEqual(v.state().moving, true);
+    v.speedRaw({ speedVehicleCentreOfGravity: MAX_KMH * 64 }); assert.strictEqual(v.state().moving, false);
+    v.speedRaw({ speedVehicleCentreOfGravity: (MAX_KMH + 5) * 64 }); assert.strictEqual(v.state().moving, true);
     assert.strictEqual(v.state({ parkedOnly: false }).moving, true, 'no way to switch it off');
     v.speedRaw({ speedVehicleCentreOfGravity: 65535 }); assert.strictEqual(v.state().moving, true, 'an invalid speed keeps the last one');
 });
 
-test('app.json: no Parked only setting', () => {
+test('app.json: no settings (no Parked only switch, no colour theme)', () => {
     const app = JSON.parse(fs.readFileSync(path.join(APP, 'app.json'), 'utf8'));
-    assert.ok(!(app.settings || []).some((x) => x.key === 'parkedOnly'));
+    assert.deepStrictEqual(app.settings || [], []);
 });
 
 /* ---------- controls.js ---------- */

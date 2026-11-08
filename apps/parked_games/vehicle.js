@@ -6,7 +6,7 @@
  *   v.speed(kmh) / v.speedRaw(struct)
  *   v.state(opts) -> { moving }
  *
- * The rule (GAMES.md): the app plays only while the car stands (<= 3 km/h). No speed at all (a
+ * The rule (GAMES.md): the app plays only while the car stands (<= MAX_KMH, 15 km/h). No speed at all (a
  * bench, the emulator's demo) counts as standing. Every game is played with the iDrive knob (and
  * touch); the steering wheel and the pedals are not inputs.
  */

@@ -90,7 +90,7 @@ Input events:
 | `{ type: 'tap', x, y }` | a short tap (also sent as touch down / up) |
 
 The app is one screen. While a game runs, the header's tabs are GAMES (back to the menu, the round
-paused), the game's own name, and SETTINGS (tapped on the touchscreen). The game holds the iDrive
+paused) and the game's own name (tapped on the touchscreen; the app has no settings). The game holds the iDrive
 controller the whole time: every turn, press and push is the game's, the knob never moves onto the
 header's tabs. A **long press** of the knob is the shell's: it pauses the round, and the pause card
 offers *Go on* or *Games menu* (turn the knob to one, press; or tap). The first 0.6 s after a game
