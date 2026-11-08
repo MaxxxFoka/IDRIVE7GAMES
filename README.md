@@ -306,3 +306,6 @@ original guide is kept here as [KIT_README.md](KIT_README.md).
 unit with `kit/tools/extract_sdk.js`), built packages (`dist/`, `*.mgu`, `*.tgz`, which contain
 that SDK), SSH keys and enrolment folders, and anything that identifies a car (VIN, captures, logs)
 must never be committed. `.gitignore` keeps them out; please don't force-add them.
+
+The kit's translated BMW fault texts (`kit/localization/diagnostic-*`, used only by upstream's
+`dtc_scanner` app, which isn't in this repo) are left out too; get them from upstream if you need them.

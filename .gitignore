@@ -55,3 +55,6 @@ kit/tools/.font-cache/
 /kit/renderd/core
 /apps/zf8hp/data/
 egs-snapshot*.json
+# BMW fault texts with zh-CN/ru translations (upstream kit, for its dtc_scanner app only):
+# not shipped here. Get them from cauliflowermossgrape/idrive7-apps if you build dtc_scanner.
+kit/localization/diagnostic-*
