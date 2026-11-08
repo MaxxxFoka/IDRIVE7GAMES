@@ -17,10 +17,9 @@ class Vehicle {
     speed(kmh) { if (typeof kmh === 'number' && isFinite(kmh)) this.kmh = kmh; }
     /** Vehicle2.statusCarSpeed2 */
     speedRaw(v) { const k = v && v.speedVehicleCentreOfGravity; if (typeof k === 'number' && k !== 65535) this.speed(k * 0.015625); }
-    /** opts: { parkedOnly (default true) } */
-    state(opts) {
-        const o = Object.assign({ parkedOnly: true }, opts);
-        return { moving: o.parkedOnly !== false && this.kmh !== null && this.kmh > MAX_KMH };
+    /** Always on: there is no setting to turn it off. */
+    state() {
+        return { moving: this.kmh !== null && this.kmh > MAX_KMH };
     }
 }
 

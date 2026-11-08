@@ -147,7 +147,8 @@ the games play only while the car stands still (3 km/h or less). As soon as it m
 pauses, the app drops back to the menu and nothing opens until the car stops again.
 
 The centre screen sits in the driver's view and the iDrive knob is in reach of the driver's seat,
-so this stays the case even though the games now use only the knob.
+so this stays the case even though the games now use only the knob, and there is no setting to
+turn it off.
 
 The games read nothing but the car's speed and the iDrive controller: not the steering wheel, not
 the pedals, not the gear or the engine. The car's own BACK, MENU and OPTION buttons always stay
@@ -171,7 +172,7 @@ Every game is played with the iDrive knob alone; touch is an extra.
 | Brick Breaker | Turn: paddle. Press: launch | Up / down: long move. Right: launch | Drag or tap to place the paddle |
 | Block Drop | Turn: move. Press: rotate | Up: swap colours. Down: drop. Left / right: move | Rotate / Left / Right / Drop buttons, tap the well to swap |
 
-**Settings** (the SETTINGS tab): *Parked only* and a *Colour theme*.
+**Settings** (the SETTINGS tab): a *Colour theme*. The parked lock has no setting: it is always on.
 
 ---
 

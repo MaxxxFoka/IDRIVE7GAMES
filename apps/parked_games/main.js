@@ -14,8 +14,8 @@
  * Controls: every game is played with the iDrive knob (turn, press, push N / E / S / W) and the
  * touchscreen. The steering wheel and the pedals are not read at all.
  *
- * Safety: the app plays only while the car stands (setting "Parked only", on by default; vehicle.js).
- * As soon as the car moves the round pauses and the menu waits until it stops again.
+ * Safety: the app plays only while the car stands (vehicle.js). This is always on: there is no
+ * setting for it. As soon as the car moves the round pauses and the menu waits until it stops again.
  */
 const path = require('path');
 const mgu = require('./kit/mgu');
@@ -39,7 +39,7 @@ const fmt = (g, n) => {
 
 mgu.run({
     async start(ctx) {
-        const { ui, settings, log } = ctx;
+        const { ui, log } = ctx;
         const games = load(path.join(__dirname, 'games'), log);
         log.info('games: ' + (games.map((g) => g.id).join(', ') || 'none'));
         const scores = new Scores(path.join(ctx.dataDir, 'scores.json'));
@@ -53,9 +53,9 @@ mgu.run({
             .catch((e) => log.warn(iface + ': ' + e));
         watch('de.bmw.infotainment.vehicle.Vehicle2', { statusCarSpeed2: (v) => car.speedRaw(v) });
         const state = () => {
-            const st = car.state({ parkedOnly: settings.get('parkedOnly') });
+            const st = car.state();
             // the kit's own parked check reads the same speed (and re-reads it every 2 s)
-            if (settings.get('parkedOnly') !== false && parked.moving()) st.moving = true;
+            if (parked.moving()) st.moving = true;
             return st;
         };
 
