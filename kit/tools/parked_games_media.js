@@ -8,8 +8,7 @@
  *   node kit/tools/parked_games_media.js [outDir] [game ...]     (default docs/media/parked-games)
  *
  * The clock is virtual (process.hrtime), so every frame is exactly 1000 / FPS ms of game time
- * however long it takes to draw. The car is faked as parked in P with the parking brake on and the
- * engine off, so the menu says the wheel and pedal are ready; the autopilots stand in for them.
+ * however long it takes to draw. The car is faked as parked; the autopilots stand in for the knob.
  * Needs ffmpeg for the GIFs.
  */
 const fs = require('fs');
@@ -40,46 +39,46 @@ process.hrtime = function (prev) {
 };
 process.hrtime.bigint = realHr.bigint;
 
-/* ---------- the car: parked, P, parking brake on, engine off ---------- */
+/* ---------- the car: parked (or moving, for the menu-moving shot) ---------- */
 const { Vehicle } = require(path.join(STAGE, 'source', 'javascript', 'vehicle'));
 let moving = false;
-Vehicle.prototype.state = () => (moving ? { moving: true, wheel: false, pedal: false, why: { wheel: 'the car is moving', pedal: 'the car is moving' } }
-    : { moving: false, wheel: true, pedal: true, why: {} });
+Vehicle.prototype.state = () => ({ moving });
 
-/* ---------- autopilots: wrap each game's create() so its api's wheel / pedal come from a bot ---------- */
+/* ---------- autopilots: wrap each game's create() so a bot works its knob every frame ---------- */
 let live = null;          // { id, game, api, bot } of the round on screen
 const bots = {
     'lane-runner': (gm) => {
-        const r = gm.run, { LANES, STEER_RANGE } = require(path.join(GAMES, 'lane-runner', 'logic'));
-        let lane = 2;
+        const r = gm.run;
         return {
-            steering() {
-                if (live.crash) return STEER_RANGE * 0.2;         // drift into whatever comes
+            tick() {
+                if (live.crash) { r.lane = 4; return; }           // sit in the bottom lane and take whatever comes
                 const ahead = r.things.filter((o) => o.kind !== 'can' && o.x > 150).sort((a, b) => a.x - b.x)[0];
-                if (ahead) {
-                    const row = r.things.filter((o) => o.kind !== 'can' && Math.abs(o.x - ahead.x) < 80), blocked = new Set();
-                    row.forEach((o) => { for (let k = 0; k < o.lanes; k++) blocked.add(o.lane + k); });
-                    if (blocked.has(lane)) lane = [0, 1, 2, 3, 4].filter((l) => !blocked.has(l)).sort((a, b) => Math.abs(a - lane) - Math.abs(b - lane))[0];
+                if (!ahead) return;
+                const row = r.things.filter((o) => o.kind !== 'can' && Math.abs(o.x - ahead.x) < 80), blocked = new Set();
+                row.forEach((o) => { for (let k = 0; k < o.lanes; k++) blocked.add(o.lane + k); });
+                if (blocked.has(r.lane)) {
+                    const to = [0, 1, 2, 3, 4].filter((l) => !blocked.has(l)).sort((a, b) => Math.abs(a - r.lane) - Math.abs(b - r.lane))[0];
+                    gm.input({ type: 'knob', delta: to > r.lane ? 1 : -1 });      // one click a frame, like a hand on the knob
                 }
-                const want = (lane - (LANES - 1) / 2) / ((LANES - 1) / 2) * STEER_RANGE;
-                gm._deg = gm._deg == null ? want : gm._deg + (want - gm._deg) * 0.35;   // a hand on the wheel, not a jump
-                return gm._deg;
             },
         };
     },
     'canyon-glide': (gm) => {
         const { pilot } = require(path.join(GAMES, 'canyon-glide', 'autopilot'));
-        return { steering: () => (live.crash ? 60 : -pilot(gm.round) * 90), pedal: () => 0 };
+        const frame = gm.frame.bind(gm);
+        gm.frame = () => Object.assign(frame(), { steer: live.crash ? 0.7 : -pilot(gm.round) });
+        return {};
     },
     'rev-keeper': (gm) => {
         let pc = null;
         return {
-            pedal() {
+            tick() {
                 const g = gm.g;
-                if (live.crash) return 100;
+                if (live.crash) { gm.throttle = 1; return; }
                 const v = pc === null ? 0 : (g.zone.c - pc) * FPS, j = g.pendingJump && g.pendingJump();
                 pc = g.zone.c;
-                return 100 * (j && j.t > j.warn - 0.1 ? j.to : g.zone.c + v * 0.1);
+                const want = j && j.t > j.warn - 0.1 ? j.to : g.zone.c + v * 0.1;
+                gm.throttle = Math.round(Math.max(0, Math.min(1, want)) * 25) / 25;    // knob clicks of 4 %
             },
         };
     },
@@ -90,10 +89,11 @@ const bots = {
             assign();
             ['L', 'R'].forEach((s) => { if (this.g[s].ctl !== 'cpu') this.g.setControl(s, 'cpu'); });
             this.g.o.left = 'cpu'; this.g.o.right = 'cpu';
-            this.g.names = { L: 'DRIVER  ·  WHEEL', R: 'CAR' };
+            this.g.names = { L: 'YOU  ·  KNOB', R: 'CAR' };
             this.g.hint = null;
         };
-        return { steering: () => 0 };
+        gm.assign();
+        return {};
     },
     'brick-breaker': (gm) => ({
         tick() {
@@ -141,8 +141,6 @@ for (const id of Object.keys(bots)) {
         const a = Object.assign({}, api);
         const gm = create(a);
         const bot = bots[id](gm);
-        if (bot.steering) a.steering = bot.steering;
-        if (bot.pedal) a.pedal = bot.pedal;
         a.end = (score) => { live.ended = true; return api.end(score); };
         live = { id, gm, bot, crash: false, ended: false };
         return gm;

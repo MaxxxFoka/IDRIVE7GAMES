@@ -1,8 +1,12 @@
 # Parked Games: the game interface
 
 Parked Games is one iDrive app (`apps/parked_games`) that holds every game. The shell owns
-everything around a game: the parked check, the menu, the controller, the steering wheel and
-pedal signals, pausing, and high scores. A game only plays.
+everything around a game: the parked check, the menu, the controller, pausing, and high scores.
+A game only plays.
+
+**Every game is played with the iDrive knob** (turn, press, and push up / down / left / right).
+The touchscreen may add to that, but nothing may need it. The steering wheel and the pedals are
+not inputs: the shell doesn't read them and a game must not ask for them.
 
 ## Where a game lives
 
@@ -30,9 +34,9 @@ Rules:
 module.exports = {
     id: 'lane-runner',             // the folder's name
     title: 'Lane Runner',          // the menu tile's title (ASCII, up to ~16 characters)
-    blurb: 'Steer between the cones',   // one line under it on the tile (up to ~28 characters)
+    blurb: 'Dodge cones lane by lane',  // one line under it on the tile (up to ~28 characters)
     order: 10,                     // menu position, low first
-    needs: ['wheel'],              // inputs the game is built around: 'wheel', 'pedal' (or [] = knob / touch)
+    needs: [],                     // always [] (or left out): every game is knob (and touch) only
     score: { unit: 'm', lower: false },  // unit shown after scores; lower: true when less is better (times)
     create(api) { return new Game(api); },
 };
@@ -52,26 +56,15 @@ module.exports = {
 | `api.best()` | the best score so far, or `null` |
 | `api.top()` | the best scores, best first: `[{ score, at }]` (up to 5; `at` = ms since 1970) |
 | `api.end(score)` | the round is over: the shell saves the score, shows the result and offers Play again. Call it once; after it `update` is not called any more (`draw` still is, under the result card) |
-| `api.steering()` | the steering angle in degrees, **+ = turned right (clockwise)**, or `null`. From the real wheel when the car allows it, else from the knob (see below). Not clamped: clamp to your own range (the design range is ±90°) |
-| `api.steerSource()` | `'wheel'`, `'knob'`, or `null` |
-| `api.pedal()` | the accelerator pedal in %, 0 to 100, or `null` |
-| `api.pedalSource()` | `'pedal'`, `'knob'`, or `null` |
 | `api.store.get(key)`, `api.store.set(key, value)` | this game's own saved values (JSON), kept across restarts |
 
-### When the wheel and pedal count
+### When the games play
 
 - The whole app plays only while the car stands (≤ 3 km/h; setting "Parked only", on by default).
   When the car moves the round pauses and the shell goes back to the menu.
-- **Steering wheel:** only with the gear in **P** and the **parking brake applied**.
-- **Accelerator pedal:** as for the wheel, and only with the **engine off** (it would rev the engine).
-- When the car doesn't allow them, or their signals don't arrive (the emulator, a bench), the shell
-  stands in with the **knob**, so every game can be played everywhere:
-  - a game that `needs: ['wheel']`: each knob click turns a virtual wheel by 6°, centred again
-    by a press (also sent to the game as `press`). `steerSource()` says `'knob'`.
-  - a game that `needs: ['pedal']` (and not the wheel): each click moves a virtual pedal by 5 %.
-  - a game that needs both: the knob steers, pushing the controller up (N) holds the pedal at 100 %.
-
-Read `api.steering()` and `api.pedal()` in `update`; they are not events.
+- All input comes as events to `input(ev)` (below). Knob clicks are discrete: a game that wants a
+  position (a paddle, a throttle) keeps its own and moves it per click; one that wants a held
+  action can use `push` ... `release`.
 
 ## The game object
 
@@ -137,10 +130,8 @@ No BMW SDK is needed for this: without `oap-sdk/` the emulator builds an offline
 
 In the emulator: the menu's tiles are tapped (or turn the knob and press), the GAMES tab goes back to the menu, the mouse wheel or `[` `]`
 turns the knob, `Enter` presses, arrow keys push, `Backspace` is BACK. Under *Vehicle signals*,
-*Manual* feeds the car: speed, gear and engine speed, and for the games also **Steering** (+ = right),
-**Pedal** and **Parking brake**. With speed 0, gear P and the parking brake on, the Steering slider is
-the real wheel (the menu says "Steering wheel ready"); with the engine speed at 0 the Pedal slider is
-the real pedal. In *Demo drive* no signals come, so the knob stands in for both. A save under
+*Manual* feeds the car: set the speed above 3 km/h to see the games pause (the Steering, Pedal and
+Parking brake sliders are the kit's, and Parked Games ignores them). A save under
 `apps/parked_games/` rebuilds and restarts the app.
 
 Unit tests: put them next to the game as `games/<id>/test.js` (plain `node`, `assert`; files named

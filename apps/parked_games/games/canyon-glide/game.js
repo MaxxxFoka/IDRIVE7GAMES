@@ -2,8 +2,8 @@
 /**
  * game.js - Canyon Glide: the rules of one round (no drawing: see draw.js).
  *
- * A glider flies to the right through an endless cave. The steering wheel (or the knob, or taps)
- * pitches it up and down; the accelerator pedal (engine off) or a knob press boosts. Touching the
+ * A glider flies to the right through an endless cave. The knob (or taps) pitches it up and down;
+ * holding the controller up boosts. Touching the
  * rock ends the round. Points: one per metre flown (1.5 while boosting) and 25 per crystal; crystals
  * also refill the boost. The cave gets faster, narrower and twistier the further you get.
  *

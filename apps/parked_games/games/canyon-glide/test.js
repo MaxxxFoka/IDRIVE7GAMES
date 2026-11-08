@@ -4,7 +4,7 @@ const assert = require('assert');
 const CG = require('./index');
 const { Cave, H, gapAt } = require('./cave');
 const { Round, READY_S, CRASH_S, PX_PER_M } = require('./game');
-const { Input } = require('./input');
+const { Input, KNOB_STEP } = require('./input');
 const { pilot } = require('./autopilot');
 
 let n = 0;
@@ -22,9 +22,6 @@ function fakeApi(o) {
         log: { info: (m) => api.logs.push(m), warn() {}, error() {} },
         theme: () => ({ accent2: '#81c4ff' }), best: () => (o.best === undefined ? null : o.best), top: () => [],
         end: (s) => api.ended.push(s),
-        steer: o.steer === undefined ? null : o.steer, pedalPct: o.pedal === undefined ? null : o.pedal,
-        steering: () => api.steer, pedal: () => api.pedalPct,
-        steerSource: () => o.steerSource || null, pedalSource: () => o.pedalSource || null,
         store: { v: {}, get: (k) => api.store.v[k], set: (k, v) => { api.store.v[k] = v; } },
     };
     return api;
@@ -43,7 +40,7 @@ function fakeCanvas(calls) {
 test('module has the GAMES.md shape', () => {
     assert.strictEqual(CG.id, 'canyon-glide');
     assert.ok(CG.title.length <= 18 && CG.blurb.length <= 40);
-    assert.deepStrictEqual(CG.needs, ['wheel', 'pedal']);
+    assert.deepStrictEqual(CG.needs, []);
     assert.strictEqual(CG.score.lower, false);
     const g = CG.create(fakeApi());
     ['update', 'draw', 'input'].forEach((f) => assert.strictEqual(typeof g[f], 'function'));
@@ -77,26 +74,25 @@ test('countdown, then play', () => {
     assert.strictEqual(r.state, 'play');
 });
 
-test('wheel clockwise dives, anticlockwise climbs; invert swaps', () => {
-    const dive = run(round(), READY_S + 0.3, () => ({ steer: 0.8 }));
-    const climb = run(round(), READY_S + 0.3, () => ({ steer: -0.8 }));
+test('knob clockwise dives, anticlockwise climbs; invert swaps', () => {
+    const turn = (n) => (r, i) => ({ knob: i === 0 ? n : 0 });
+    const dive = run(round(), READY_S + 0.3, turn(7));
+    const climb = run(round(), READY_S + 0.3, turn(-7));
     assert.ok(dive.y > H / 2 + 20, 'dive y ' + dive.y);
     assert.ok(climb.y < H / 2 - 20, 'climb y ' + climb.y);
-    const inv = run(round({ invert: true }), READY_S + 0.3, () => ({ steer: 0.8 }));
+    const inv = run(round({ invert: true }), READY_S + 0.3, turn(7));
     assert.ok(inv.y < H / 2 - 20, 'inverted y ' + inv.y);
 });
 
-test('wheel dead zone keeps level flight; full scale is full pitch', () => {
+test('the knob trim holds until turned back or pressed; it stops at full pitch', () => {
     const i = new Input();
-    assert.strictEqual(i.update(0.016, { steer: 0.03 }, 260).pitch, 0);
-    assert.strictEqual(i.update(0.016, { steer: 1.7 }, 260).pitch, -1);
-});
-
-test('knob nudges and fades back', () => {
-    const i = new Input();
-    assert.ok(i.update(0.016, { knob: -2 }, 260).pitch > 0.4);      // anticlockwise = climb
-    let p = 1; for (let k = 0; k < 120; k++) p = i.update(0.016, {}, 260).pitch;
-    assert.strictEqual(p, 0);
+    const p1 = i.update(0.016, { knob: -2 }, 260).pitch;
+    assert.ok(Math.abs(p1 - 2 * KNOB_STEP) < 1e-9, 'anticlockwise = climb ' + p1);
+    let p = 0; for (let k = 0; k < 120; k++) p = i.update(0.016, {}, 260).pitch;
+    assert.ok(Math.abs(p - p1) < 1e-9, 'held');
+    assert.ok(Math.abs(i.update(0.016, { knob: 2 }, 260).pitch) < 1e-9, 'turned back');
+    assert.strictEqual(i.update(0.016, { knob: 40 }, 260).pitch, -1);
+    assert.strictEqual(i.update(0.016, { level: true }, 260).pitch, 0);
 });
 
 test('taps above / below the glider nudge it up / down', () => {
@@ -106,16 +102,12 @@ test('taps above / below the glider nudge it up / down', () => {
     assert.ok(i.update(0.016, { tap: { x: 400, y: 450 } }, 260).pitch < 0);
 });
 
-test('pedal boosts and drains energy; a knob press boosts too; a resting foot does not', () => {
+test('holding boost speeds up and drains energy', () => {
     const a = run(round({ seed: 3 }), READY_S + 2, auto);
-    const b = run(round({ seed: 3 }), READY_S + 2, (r) => Object.assign(auto(r), { pedal: 1 }));
+    const b = run(round({ seed: 3 }), READY_S + 2, (r) => Object.assign(auto(r), { boost: 1 }));
     assert.ok(b.dist > a.dist * 1.3, 'boosted ' + b.dist + ' vs ' + a.dist);
     assert.ok(b.energy < 0.8 && a.energy === 1, 'energy ' + b.energy);
     assert.ok(b.score() > a.score());
-    const c = run(round({ seed: 3 }), READY_S + 2, (r, i) => Object.assign(auto(r), { press: i === 200 }));
-    assert.ok(c.dist > a.dist && c.energy < 1, 'press boost');
-    const d = run(round({ seed: 3 }), READY_S + 2, (r) => Object.assign(auto(r), { pedal: 0.04 }));
-    assert.strictEqual(d.dist, a.dist);
 });
 
 test('diving into the floor crashes, then the round is over', () => {
@@ -125,7 +117,7 @@ test('diving into the floor crashes, then the round is over', () => {
     run(r, CRASH_S + 0.1);
     assert.strictEqual(r.over(), true);
     assert.strictEqual(r.best, Math.max(3, r.score()));
-    const s = r.score(); run(r, 1, () => ({ steer: -1, pedal: 1 }));
+    const s = r.score(); run(r, 1, () => ({ steer: -1, boost: 1 }));
     assert.strictEqual(r.score(), s, 'nothing changes after the round');
 });
 
@@ -143,24 +135,26 @@ test('points: one per metre, 25 per crystal', () => {
     assert.ok(Math.abs(r.score() - (m + r.crystals * 25)) <= 2, r.score() + ' vs ' + m + ' + ' + r.crystals + ' crystals');
 });
 
-test('through the api: the wheel in degrees steers, api.end once with the score', () => {
-    const api = fakeApi({ steer: 90, steerSource: 'wheel', pedalSource: 'pedal', pedal: 0 });
+test('through the api: knob clicks dive the glider into the floor, api.end once with the score', () => {
+    const api = fakeApi();
     const g = CG.create(api);
+    g.input({ type: 'knob', delta: 9 });
     for (let i = 0; i < (READY_S + 6) * 60; i++) g.update(FRAME);
     assert.deepStrictEqual(api.ended, [g.round.score()]);
     for (let i = 0; i < 60; i++) g.update(FRAME);
     assert.strictEqual(api.ended.length, 1);
 });
 
-test('through the api: knob clicks are not counted twice when the knob is the wheel', () => {
-    const own = CG.create(fakeApi()), stand = CG.create(fakeApi({ steer: 0, steerSource: 'knob' }));
-    own.input({ type: 'knob', delta: -3 }); stand.input({ type: 'knob', delta: -3 });
-    assert.ok(own.frame().knob === -3 && stand.frame().knob === 0);
-    stand.input({ type: 'press' });
-    assert.strictEqual(stand.frame().press, true);
-    const sim = CG.create(fakeApi({ steerSource: 'knob', pedalSource: 'knob', pedal: 0 }));
-    sim.input({ type: 'press' });
-    assert.strictEqual(sim.frame().press, false, 'press only re-centres when push N is the pedal');
+test('through the api: press levels out, push up holds the boost until released', () => {
+    const g = CG.create(fakeApi());
+    g.input({ type: 'knob', delta: -3 }); g.input({ type: 'press' });
+    let f = g.frame();
+    assert.ok(f.knob === -3 && f.level === true && f.boost === 0);
+    g.input({ type: 'push', dir: 'N' });
+    assert.strictEqual(g.frame().boost, 1); assert.strictEqual(g.frame().boost, 1);
+    g.input({ type: 'release' });
+    f = g.frame();
+    assert.ok(f.boost === 0 && f.knob === 0 && f.level === false);
 });
 
 test('through the api: invert comes from the store; best from api.best()', () => {
@@ -172,13 +166,13 @@ test('through the api: invert comes from the store; best from api.best()', () =>
 
 test('draw uses only GAMES.md calls, with finite numbers, in every state', () => {
     const calls = {}, cv = fakeCanvas(calls);
-    for (const src of ['wheel', 'knob', null]) {
-        const api = fakeApi({ steer: 0, steerSource: src, pedalSource: src && 'pedal' });
+    {
+        const api = fakeApi();
         const g = CG.create(api);
         g.draw(cv);
-        for (let i = 0; i < (READY_S + 5) * 60; i++) { api.steer = -pilot(g.round) * 90; g.update(FRAME); }
+        for (let i = 0; i < (READY_S + 5) * 60; i++) g.update(FRAME);
         g.draw(cv);
-        api.steer = 90; for (let i = 0; i < 6 * 60; i++) g.update(FRAME);
+        g.input({ type: 'knob', delta: 12 }); for (let i = 0; i < 6 * 60; i++) g.update(FRAME);
         g.draw(cv);
         assert.ok(g.round.over());
     }

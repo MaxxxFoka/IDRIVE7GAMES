@@ -1,7 +1,7 @@
 {
   "id": "parked_games",
   "title": "Parked Games",
-  "description": "Small games for when the car is parked: the knob, the touchscreen, and in P with the parking brake on also the steering wheel and pedal",
+  "description": "Small games for when the car is parked, played with the iDrive knob (and the touchscreen)",
   "version": "0.1.0",
   "vendor": "custom",
   "loggingId": "OAB1",
@@ -9,24 +9,6 @@
   "signals": {
     "de.bmw.infotainment.vehicle.Vehicle2": {
       "statusCarSpeed2": "rs"
-    },
-    "de.bmw.infotainment.vehicle.CDS": {
-      "statusEngineSpeed2": "rs",
-      "statusHandBrake": "rs",
-      "statusEngineStatus": "rs"
-    },
-    "de.bmw.infrastructure.VehicleInformation": {
-      "statusGearboxDrive": "s",
-      "DataPowerTrain2": "s"
-    },
-    "de.bmw.chassis.SteeringAngle": {
-      "_optional": "the steering wheel as a controller (the knob steers instead)",
-      "ActualSteeringAngleDriver": "s",
-      "actualSteeringAngleDriverNoCRC": "s"
-    },
-    "de.bmw.powertrain.AcceleratorPedal": {
-      "_optional": "the accelerator pedal as a controller (the knob stands in)",
-      "AngleAcceleratorPedal": "s"
     },
     "de.bmw.infotainment.controlelements.FrontCCU": {
       "statusRotaryEncoderState": "rs"
@@ -52,38 +34,6 @@
       "label": "Parked only (pauses while driving)",
       "type": "bool",
       "default": true
-    },
-    {
-      "key": "wheel",
-      "label": "Steering wheel and pedal",
-      "type": "choice",
-      "default": "auto",
-      "options": [
-        [
-          "auto",
-          "In P with the parking brake on"
-        ],
-        [
-          "off",
-          "Off (the knob only)"
-        ]
-      ]
-    },
-    {
-      "key": "steerDir",
-      "label": "Steering direction",
-      "type": "choice",
-      "default": "normal",
-      "options": [
-        [
-          "normal",
-          "Normal"
-        ],
-        [
-          "reversed",
-          "Reversed"
-        ]
-      ]
     },
     {
       "key": "theme",

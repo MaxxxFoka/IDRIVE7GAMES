@@ -1,10 +1,11 @@
 'use strict';
 /**
- * Lane Runner - steer down an endless road with the steering wheel (or the knob), between cones
- * and barriers, picking up fuel cans. Gentle steering: about 90 degrees each way covers the road.
+ * Lane Runner - drive down an endless road, changing lanes with the iDrive knob (one click = one
+ * lane, clockwise = down; pushing the controller up / down works too), between cones and barriers,
+ * picking up fuel cans.
  * Rules: logic.js. This file draws, in the shell's look (api.style): a neon highway at night.
  */
-const { Run, ROAD, LANES, LANE_H, CAR, STEER_RANGE, LIVES } = require('./logic');
+const { Run, ROAD, LANES, LANE_H, CAR, LIVES } = require('./logic');
 
 const W = 1600, H = 520;
 const HUE = '#38d9ff';
@@ -31,7 +32,7 @@ class Game {
 
     update(dt) {
         const r = this.run, S = this.S;
-        r.step(dt, this.api.steering());
+        r.step(dt);
         this.scroll += r.speed * Math.min(dt, 50) / 1000;
         this.hitK = Math.max(0, this.hitK - dt / 450);
         this.canK = Math.max(0, this.canK - dt / 500);
@@ -61,7 +62,12 @@ class Game {
         this.fx.update(dt); this.pops.update(dt); this.shake.update(dt);
     }
 
-    input() { /* the steering comes from api.steering(); the shell turns the knob into it where needed */ }
+    input(ev) {
+        const r = this.run;
+        if (r.over) return;
+        if (ev.type === 'knob') r.shift(ev.delta > 0 ? 1 : ev.delta < 0 ? -1 : 0);
+        else if (ev.type === 'push' && (ev.dir === 'N' || ev.dir === 'S')) r.shift(ev.dir === 'N' ? -1 : 1);
+    }
 
     draw(cv) {
         const r = this.run, S = this.S, ox = this.shake.x, oy = this.shake.y;
@@ -105,7 +111,7 @@ class Game {
         S.flash(cv, 0, ROAD.top, W, ROAD.bottom - ROAD.top, C.can, this.canK * 0.4);
         this.hud(cv, r);
         if (this.countdown > 0) S.countdown(cv, W / 2, (ROAD.top + ROAD.bottom) / 2 - 20, this.countdown, 600, HUE,
-            this.api.steerSource() === 'wheel' ? 'Centre the wheel' : 'Turn the knob to steer');
+            'Turn the knob to change lanes');
     }
 
     /** the verges: dark, with street lights passing (parallax) */
@@ -195,16 +201,17 @@ class Game {
             if (on) S.block(cv, lx, y - 12, 40, 16, 6, HUE, 0.4);
             else cv.strokeRoundRect(lx, y - 12, 40, 16, 6, 1.5, S.P.faint);
         }
-        this.wheel(cv, 1545, 70, 20);
+        this.lanes(cv, 1560, 52, r);
     }
-    wheel(cv, cx, cy, rad) {
-        const S = this.S, s = this.api.steering();
-        const a = Math.max(-STEER_RANGE, Math.min(STEER_RANGE, s || 0));
-        cv.arc(cx, cy, rad - 4, rad, 0, 360, S.a(HUE, 0.3));
-        cv.arc(cx, cy, rad - 4, rad, Math.min(0, a), Math.max(0, a), HUE, { round: true });
-        const rr = (a - 90) * Math.PI / 180;
-        cv.line(cx, cy, cx + Math.cos(rr) * (rad - 4), cy + Math.sin(rr) * (rad - 4), 4, Math.abs(s || 0) > STEER_RANGE ? S.P.bad : S.P.ink);
-        S.label(cv, this.api.steerSource() === 'wheel' ? 'Wheel' : 'Knob', cx - rad - 10, cy + 6, S.P.dim, { size: 13, align: 'right' });
+    /** a small column of five lane pips, the target lane lit */
+    lanes(cv, x, y, r) {
+        const S = this.S;
+        S.label(cv, 'Lane', x - 14, y + 20, S.P.dim, { size: 13, align: 'right' });
+        for (let i = 0; i < LANES; i++) {
+            const on = i === r.lane;
+            if (on) S.block(cv, x - 6, y + i * 9, 18, 6, 3, HUE, 0.5);
+            else cv.roundRect(x - 6, y + i * 9, 18, 6, 3, S.a(HUE, 0.25));
+        }
     }
 }
 
@@ -232,9 +239,9 @@ function art(cv, x, y, w, h, S, ms) {
 module.exports = {
     id: 'lane-runner',
     title: 'Lane Runner',
-    blurb: 'Steer between the cones',
+    blurb: 'Dodge cones lane by lane',
     order: 10,
-    needs: ['wheel'],
+    needs: [],
     score: { unit: 'm', lower: false },
     art,
     create(api) { return new Game(api); },

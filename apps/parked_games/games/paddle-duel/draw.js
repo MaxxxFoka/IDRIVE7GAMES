@@ -107,8 +107,6 @@ function hud(cv, g, S, col) {
     else S.label(cv, 'First to ' + n, W / 2 + 330, y - 8, P.dim, { size: 15 });
     if (g.longest > 1) S.stat(cv, 'Best rally', g.longest, W / 2 - 330, y, { size: 32, color: P.dim, align: 'right' });
     if (g.hint && g.hits === 0 && g.L.score + g.R.score === 0) S.label(cv, g.hint, W / 2, COURT.bottom - 18, P.dim, { size: 14, align: 'center' });
-    const lost = g.wheelLost();
-    if (lost) S.label(cv, 'No steering signal: the car plays this side', lost === 'L' ? W * 0.25 : W * 0.75, COURT.bottom - 16, P.dim, { size: 13, align: 'center' });
 }
 
 /** The menu tile: two paddles and a ball crossing between them */

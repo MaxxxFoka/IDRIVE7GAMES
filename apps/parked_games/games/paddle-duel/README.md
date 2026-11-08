@@ -1,18 +1,16 @@
 # Paddle Duel
 
-A two-player ball-and-paddle game for the parked car, part of Parked Games
+A ball-and-paddle duel for the parked car, part of Parked Games
 (interface: [`../../GAMES.md`](../../GAMES.md)). Original design.
 
 ## Who plays
 
-| The shell's steering source | Left paddle (driver, LHD) | Right paddle |
-|---|---|---|
-| `wheel` (P + parking brake) | the **steering wheel**: its angle is the paddle's position, ±90° for the full travel, centred on the angle at the start of the match | the car, until the passenger turns the **iDrive knob** or touches the right half of the screen; then it's a duel |
-| `knob` (no real wheel: emulator, rules not met) | you, with the knob (the shell's virtual wheel, 5 clicks from the centre to the edge; a press re-centres) | the car |
-| none | the car | you, with the knob directly |
+You play your paddle with the **iDrive knob**: each click moves it, pushing the controller up or
+down slides it. The car plays the other side. A second player can take the car's paddle by
+touching that half of the screen; then it's a duel.
 
-Push the controller left or right before the first serve to put the driver's paddle on that side
-(right-hand-drive cars). It is remembered.
+Your paddle is on the left. Push the controller right (or left) before the first serve to move it
+to that side; it is remembered.
 
 ## Rules
 
@@ -28,8 +26,3 @@ Push the controller left or right before the first serve to put the driver's pad
 - `game.js`: the rules and the drawing (no shell, no kit), testable with plain node
 - `index.js`: the plug-in: maps the shell's inputs onto the paddles
 - `test.js`: `node apps/parked_games/games/paddle-duel/test.js`
-
-## Still to check on the car
-
-- Which way the real wheel's sign runs (the shell promises + = right; turning right moves the paddle down).
-- Whether ±90° feels right without power assist (engine off); `WHEEL_RANGE` in `index.js`.

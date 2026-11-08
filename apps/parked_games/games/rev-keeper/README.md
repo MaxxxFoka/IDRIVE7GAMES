@@ -1,9 +1,11 @@
 # Rev Keeper
 
-A Parked Games game: keep the needle inside a green zone that keeps moving, using only accelerator
-pedal pressure. Original design.
+A Parked Games game: keep the needle inside a green zone that keeps moving, on a throttle you work
+with the iDrive knob. Original design.
 
-- **Needle:** follows the pedal with engine-like inertia. It climbs fast and falls back slower, so
+- **Throttle:** each knob click clockwise opens it by 4 %, anticlockwise closes it; pushing the
+  controller up or down moves it 20 % at once (handy for the jumps). It stays where you leave it.
+- **Needle:** follows the throttle with engine-like inertia. It climbs fast and falls back slower, so
   you have to lift early.
 - **Zone:** moves in phases: drift, hold, jump, sweep, breathe (gets narrower and wider). A jump is
   announced by a blinking outline at the new spot about a second before it moves.
@@ -14,15 +16,13 @@ pedal pressure. Original design.
   engine blows and the round ends.
 - **Levels:** every 12 s the zone gets narrower (11 % of the scale down to 5 %) and moves faster.
 
-The shell gives the real pedal only in P with the parking brake on and the engine off. Anywhere
-else, the iDrive knob stands in for it (5 % a click), so the game can be played in the emulator
-and by a passenger.
+The engine and rpm are only a picture: the game reads and sends nothing to the car.
 
 | File | |
 |---|---|
 | `index.js` | the module the shell loads (`GAMES.md`) |
 | `logic.js` | the rules, no drawing |
-| `draw.js` | the picture (1600 x 520) |
+| `look.js` | the picture in the shell's look; `draw.js` a plain fallback |
 | `test.js` | `node apps/parked_games/games/rev-keeper/test.js`: scripted players for balance, plus interface checks |
 
 Balance, from the tests: a player who anticipates perfectly survives indefinitely, and only the
