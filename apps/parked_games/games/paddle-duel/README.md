@@ -5,12 +5,15 @@ A ball-and-paddle duel for the parked car, part of Parked Games
 
 ## Who plays
 
-You play your paddle with the **iDrive knob**: each click moves it, pushing the controller up or
-down slides it. The car plays the other side. A second player can take the car's paddle by
-touching that half of the screen; then it's a duel.
+You play your paddle with the **iDrive knob** (each click moves it, pushing the controller up or
+down slides it) or with a **finger** on your half of the screen. The car plays the other side.
 
-Your paddle is on the left. Push the controller right (or left) before the first serve to move it
-to that side; it is remembered.
+**Two players** (driver and passenger): a second player takes the car's paddle by touching the
+other half of the screen. Then one plays on the knob and the other on the touchscreen, and your
+half stops answering touch so nobody moves the other's paddle.
+
+The knob's paddle is on the left. Push the controller right (or left) before the first serve to
+move it to that side; it is remembered. So either seat can take the knob, and the other the screen.
 
 ## Rules
 

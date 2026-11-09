@@ -1,8 +1,8 @@
 'use strict';
 /**
  * Lane Runner - drive down an endless road, changing lanes with the iDrive knob (one click = one
- * lane, clockwise = down; pushing the controller up / down works too), between cones and barriers,
- * picking up fuel cans.
+ * lane, clockwise = down; pushing the controller up / down works too; or touch a lane on the
+ * screen to steer to it), between cones and barriers, picking up fuel cans.
  * Rules: logic.js. This file draws, in the shell's look (api.style): a neon highway at night.
  */
 const { Run, ROAD, LANES, LANE_H, CAR, LIVES } = require('./logic');
@@ -67,6 +67,12 @@ class Game {
         if (r.over) return;
         if (ev.type === 'knob') r.shift(ev.delta > 0 ? 1 : ev.delta < 0 ? -1 : 0);
         else if (ev.type === 'push' && (ev.dir === 'N' || ev.dir === 'S')) r.shift(ev.dir === 'N' ? -1 : 1);
+        else if (ev.type === 'touch' && ev.phase !== 'up') {
+            // a finger on the road: steer to the lane under it (a drag follows the finger)
+            if (ev.y < ROAD.top - 10 || ev.y > ROAD.bottom + 20) return;
+            const lane = Math.max(0, Math.min(LANES - 1, Math.floor((ev.y - ROAD.top) / LANE_H)));
+            r.shift(lane - r.lane);
+        }
     }
 
     draw(cv) {
@@ -111,7 +117,7 @@ class Game {
         S.flash(cv, 0, ROAD.top, W, ROAD.bottom - ROAD.top, C.can, this.canK * 0.4);
         this.hud(cv, r);
         if (this.countdown > 0) S.countdown(cv, W / 2, (ROAD.top + ROAD.bottom) / 2 - 20, this.countdown, 600, HUE,
-            'Turn the knob to change lanes');
+            'Turn the knob or touch a lane');
     }
 
     /** the verges: dark, with street lights passing (parallax) */

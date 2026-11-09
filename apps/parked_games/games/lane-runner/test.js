@@ -68,4 +68,17 @@ const dry = new Run(rng(1));
 dry.fuel = 0.001; dry.step(50);
 assert.ok(dry.over && dry.why === 'fuel');
 
+// touch: a finger on a lane steers there; touches off the road are ignored
+{
+    const mod = require('./index'), { ROAD, LANE_H } = require('./logic');
+    const S = require('../../style');
+    const g = mod.create({ random: rng(3), style: S, best: () => null, end() {}, now: () => 0 });
+    g.input({ type: 'touch', phase: 'down', x: 800, y: ROAD.top + LANE_H * 0.5 });
+    assert.strictEqual(g.run.lane, 0);
+    g.input({ type: 'touch', phase: 'move', x: 800, y: ROAD.top + LANE_H * 4.5 });
+    assert.strictEqual(g.run.lane, LANES - 1, 'a drag follows the finger');
+    g.input({ type: 'touch', phase: 'down', x: 800, y: 50 });
+    assert.strictEqual(g.run.lane, LANES - 1, 'the HUD is not a lane');
+}
+
 console.log('lane-runner: all passed');

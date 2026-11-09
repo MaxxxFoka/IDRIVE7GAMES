@@ -181,4 +181,18 @@ test('draws every state with only the documented canvas calls', () => {
     assert.deepStrictEqual(big, [], 'words over size 40: ' + big.join(', '));
 });
 
+test('touch: the strip is a throttle slider', () => {
+    const game = mod.create(fakeApi());
+    game.input({ type: 'touch', phase: 'down', x: 80 + 1440 * 0.75, y: 250 });
+    assert.ok(Math.abs(game.throttle - 0.75) < 1e-9);
+    game.input({ type: 'touch', phase: 'move', x: 0, y: 250 });
+    assert.strictEqual(game.throttle, 0);
+    game.input({ type: 'touch', phase: 'move', x: 1600, y: 250 });
+    assert.strictEqual(game.throttle, 1);
+    game.input({ type: 'touch', phase: 'down', x: 800, y: 80 });
+    assert.strictEqual(game.throttle, 1, 'the score row is not the slider');
+    game.input({ type: 'knob', delta: -5 });
+    assert.ok(Math.abs(game.throttle - 0.8) < 1e-9, 'the knob carries on from the finger');
+});
+
 console.log(n + ' tests passed');

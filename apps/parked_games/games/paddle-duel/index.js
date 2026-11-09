@@ -3,9 +3,9 @@
  * Paddle Duel: the Parked Games plug-in (interface: apps/parked_games/GAMES.md).
  * The rules and the drawing are in game.js; this file maps the shell's inputs onto the two paddles.
  *
- * You play your paddle with the iDrive knob (each click moves it, push up / down slides it) against
- * the car. A second player can take the car's paddle by touching that half of the screen: then it's
- * a duel. Your paddle is on the left; pushing the controller right (or left) before the first serve
+ * You play your paddle with the iDrive knob (each click moves it, push up / down slides it), or with a
+ * finger on your half of the screen, against the car. A second player can take the car's paddle by
+ * touching the other half: then it's a duel. Your paddle is on the left; pushing the controller right (or left) before the first serve
  * moves it to that side, remembered in the game's store.
  *
  * Score for the high-score table: the longest rally of the match (hits).
@@ -35,9 +35,9 @@ class Game {
     assign() {
         const g = this.g, me = this.side, o = this.other, names = {};
         const oc = this.joined ? 'touch' : 'cpu';
-        names[me] = 'YOU  ·  KNOB';
+        names[me] = this.joined ? 'PLAYER 1  ·  KNOB' : 'YOU  ·  KNOB / TOUCH';
         names[o] = this.joined ? 'PLAYER 2  ·  TOUCH' : 'CAR  ·  TOUCH HERE TO PLAY';
-        g.hint = this.joined ? null : 'Turn the knob to move your paddle   ·   push up / down to slide it';
+        g.hint = this.joined ? null : 'Turn the knob or drag on your half to move your paddle   ·   push up / down to slide it';
         if (g[me].ctl !== 'knob') g.setControl(me, 'knob');
         if (g[o].ctl !== oc) g.setControl(o, oc);
         g.o.left = g.L.ctl; g.o.right = g.R.ctl;
@@ -78,10 +78,12 @@ class Game {
                 g.tilt(null);
                 break;
             case 'touch': {
-                if (ev.phase === 'up') return;
-                // a finger on the other half of the court takes (and moves) that paddle
-                const o = this.other, onHalf = o === 'L' ? ev.x < 800 : ev.x >= 800;
-                if (!onHalf || ev.y < COURT.top - 20) return;
+                if (ev.phase === 'up' || ev.y < COURT.top - 20) return;
+                // alone, a finger on your own half moves your paddle too. A finger on the other half
+                // takes (and moves) the car's paddle: a second player on touch, you stay on the knob
+                // (and then your half no longer answers touch, so player 2 can't move your paddle)
+                const me = this.side, o = this.other, mine = me === 'L' ? ev.x < 800 : ev.x >= 800;
+                if (mine) { if (!this.joined) g[me].setTarget(ev.y); break; }
                 if (!this.joined) { this.joined = true; this.assign(); }
                 g[o].setTarget(ev.y);
                 break;

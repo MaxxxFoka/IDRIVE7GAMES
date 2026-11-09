@@ -19,7 +19,7 @@ const clamp01 = (x) => (x < 0 ? 0 : x > 1 ? 1 : x);
 const bold = (extra) => Object.assign({ font: 'bold' }, extra);
 const num = (extra) => Object.assign({ font: 'num' }, extra);
 
-/** view: { best: number | null, source: 'knob', paused: bool } */
+/** view: { best: number | null, source: 'knob' | 'touch', paused: bool, throttle: 0..1 } */
 function draw(cv, g, view) {
     view = view || {};
     cv.fillRect(0, 0, W, H, C.bg);

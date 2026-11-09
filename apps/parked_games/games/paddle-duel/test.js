@@ -146,11 +146,27 @@ test('plugin: push left / right before the first serve picks your side and remem
 test('plugin: a touch on the other half takes the car\'s paddle for a second player', () => {
     const game = plugin.create(shell());
     game.input({ type: 'touch', phase: 'down', x: 300, y: COURT.top + 60 });
-    assert.strictEqual(game.g.R.ctl, 'cpu', 'your own half does nothing');
+    assert.strictEqual(game.g.R.ctl, 'cpu', 'your own half does not call a second player');
+    assert.ok(game.g.L.target < MIDY, 'alone, a finger on your half moves your paddle');
     game.input({ type: 'touch', phase: 'down', x: 1300, y: COURT.top + 60 });
     assert.strictEqual(game.g.R.ctl, 'touch');
     assert.strictEqual(game.g.L.ctl, 'knob');
     assert.ok(game.g.R.target < MIDY);
+    // two players: the knob player's half no longer answers touch, the knob still moves it
+    const before = game.g.L.target;
+    game.input({ type: 'touch', phase: 'move', x: 300, y: COURT.bottom - 20 });
+    assert.strictEqual(game.g.L.target, before, 'player 2 cannot move player 1\'s paddle');
+    game.input({ type: 'knob', delta: 3 });
+    assert.ok(game.g.L.target > before, 'the knob still does');
+});
+
+test('plugin: two players either way round: knob on the right, touch on the left', () => {
+    const game = plugin.create(shell());
+    game.input({ type: 'push', dir: 'E' });
+    game.input({ type: 'touch', phase: 'down', x: 300, y: COURT.bottom - 40 });
+    assert.strictEqual(game.g.L.ctl, 'touch');
+    assert.strictEqual(game.g.R.ctl, 'knob');
+    assert.ok(game.g.L.target > MIDY);
 });
 
 test('plugin: a whole match ends with api.end(longest rally), once', () => {

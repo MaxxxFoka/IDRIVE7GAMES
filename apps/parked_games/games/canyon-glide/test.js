@@ -4,7 +4,7 @@ const assert = require('assert');
 const CG = require('./index');
 const { Cave, H, gapAt } = require('./cave');
 const { Round, READY_S, CRASH_S, PX_PER_M } = require('./game');
-const { Input, KNOB_STEP } = require('./input');
+const { Input, KNOB_STEP, HOLD_SPAN } = require('./input');
 const { pilot } = require('./autopilot');
 
 let n = 0;
@@ -177,6 +177,27 @@ test('draw uses only GAMES.md calls, with finite numbers, in every state', () =>
         assert.ok(g.round.over());
     }
     assert.ok(calls.quad && calls.text && calls.gradientRect);
+});
+
+test('touch: a finger held above / below the glider climbs / dives towards it', () => {
+    const inp = new Input();
+    assert.ok(inp.update(0.016, { hold: 100 }, 260).pitch > 0.99, 'far above: full climb');
+    assert.ok(inp.update(0.016, { hold: 400 }, 260).pitch < -0.99, 'far below: full dive');
+    assert.ok(Math.abs(inp.update(0.016, { hold: 260 + HOLD_SPAN / 2 }, 260).pitch + 0.5) < 1e-9, 'half way: half');
+    assert.strictEqual(inp.update(0.016, {}, 260).pitch, 0, 'let go: level');
+});
+
+test('touch: the Boost meter boosts while held; a finger on the cave steers', () => {
+    const g = CG.create(fakeApi());
+    g.input({ type: 'touch', phase: 'down', x: 1450, y: 80 });
+    let f = g.frame();
+    assert.strictEqual(f.boost, 1); assert.strictEqual(f.hold, null);
+    g.input({ type: 'touch', phase: 'up', x: 1450, y: 80 });
+    g.input({ type: 'touch', phase: 'down', x: 600, y: 150 });
+    f = g.frame();
+    assert.strictEqual(f.boost, 0); assert.strictEqual(f.hold, 150);
+    g.input({ type: 'touch', phase: 'up', x: 600, y: 150 });
+    assert.strictEqual(g.frame().hold, null);
 });
 
 console.log('all ' + n + ' passed');

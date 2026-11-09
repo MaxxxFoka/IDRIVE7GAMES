@@ -101,7 +101,7 @@ function draw(cv, g, S, fx, view) {
 
 function hud(cv, g, S, fx, view) {
     const P = S.P, y = 112;
-    S.chip(cv, 'Turn the knob: throttle  ·  push up / down: big step', 24, 54, P.dim, { size: 13 });
+    S.chip(cv, 'Turn the knob or slide along the strip: throttle  ·  push up / down: big step', 24, 54, P.dim, { size: 13 });
     S.stat(cv, 'Score', Math.floor(g.score), W / 2, y, { size: 64, align: 'center', glow: true, color: P.ink });
     if (view.best != null) S.label(cv, 'Best ' + view.best, W / 2 + 120, y - 8, P.dim, { size: 13 });
     const m = g.mult, mc = m >= 6 ? P.gold : m >= 3 ? P.good : P.ink;

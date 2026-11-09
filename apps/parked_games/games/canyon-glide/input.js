@@ -8,6 +8,7 @@
  *   level  bool            the knob was pressed this frame: level out (trim back to 0)
  *   boost  0..1            the controller held up (N): boost while held
  *   tap    {x, y} or null  a tap on the game (1600 x 520 px): a nudge up / down that fades
+ *   hold   y or null       a finger held on the cave (screen y): the glider climbs or dives towards it
  *   steer  -1..1 or null   an absolute stick, for the autopilots in the tests and media only
  *
  * Out: pitch -1..1 (+1 = climb hard, -1 = dive hard) and boost 0..1 (wanted; the game limits it
@@ -21,6 +22,7 @@ const { clamp } = require('./cave');
 const KNOB_STEP = 0.12;         // pitch trim per knob click
 const NUDGE_FADE = 1.6;         // tap nudge fades at this much pitch per second
 const TAP_NUDGE = 0.8;
+const HOLD_SPAN = 140;          // a finger this far above / below the glider = full climb / dive
 
 class Input {
     constructor(opts) {
@@ -42,13 +44,19 @@ class Input {
             this.nudge = clamp(this.nudge + (inp.tap.y < gliderY ? TAP_NUDGE : -TAP_NUDGE), -1, 1);
             this.source = 'touch';
         }
+        let hold = 0;
+        if (typeof inp.hold === 'number' && isFinite(inp.hold) && typeof gliderY === 'number') {
+            hold = clamp((gliderY - inp.hold) / HOLD_SPAN, -1, 1);
+            this.trim = 0;          // the finger takes over; the knob trim starts again from level
+            this.source = 'touch';
+        }
         const f = NUDGE_FADE * dt;
         this.nudge = Math.abs(this.nudge) <= f ? 0 : this.nudge - Math.sign(this.nudge) * f;
         const stick = typeof inp.steer === 'number' && isFinite(inp.steer) ? -sign * clamp(inp.steer, -1, 1) : 0;
-        const pitch = clamp(stick + this.trim + this.nudge, -1, 1);
+        const pitch = clamp(stick + this.trim + this.nudge + hold, -1, 1);
         const boost = typeof inp.boost === 'number' && isFinite(inp.boost) ? clamp(inp.boost, 0, 1) : inp.boost ? 1 : 0;
         return { pitch: pitch, boost: boost };
     }
 }
 
-module.exports = { Input, KNOB_STEP };
+module.exports = { Input, KNOB_STEP, HOLD_SPAN };
