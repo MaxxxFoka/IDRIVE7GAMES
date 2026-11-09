@@ -489,7 +489,12 @@ function ccu(m) {
         while (n) { const s = Math.max(-16, Math.min(16, n)); n -= s; Ccu.knob = (Ccu.knob + s) & 0xffff; ccuSend(); }
         return;
     }
-    if (m.press !== undefined) Ccu.pb = m.press ? 1 : 0;
+    if (m.press !== undefined) {
+        // held for a second: a long press (DREHGEBER_LANG_GEDRUECKT), as the car's controller reports it
+        clearTimeout(Ccu.longT);
+        Ccu.pb = m.press ? 1 : 0;
+        if (m.press) Ccu.longT = setTimeout(() => { if (Ccu.pb === 1) { Ccu.pb = 2; ccuSend(); } }, 1000);
+    }
     if (m.tilt !== undefined) Ccu.df = TILT[m.tilt] || 0;
     ccuSend();
 }

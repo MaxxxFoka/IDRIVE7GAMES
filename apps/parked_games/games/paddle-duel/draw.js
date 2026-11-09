@@ -120,4 +120,52 @@ function art(cv, x, y, w, h, S, ms) {
     S.glowCircle(cv, bx, by, 8, '#ffffff', 1);
 }
 
-module.exports = { Fx, draw, art, HUE };
+/* ---------- the setup card (index.js Game: rows(), choices(row), row) ---------- */
+const SP = { x: W / 2 - 380, y: 128, w: 760, h: 378 };
+const ROW_H = 68;
+/** the setup rows: { row, x, y, w, h, opts: [{ x, w }] }; Start at the card's bottom */
+function setupRects(game) {
+    let y = SP.y + 52;
+    return game.rows().map((row) => {
+        const start = row === 'start', h = start ? 60 : ROW_H;
+        const r = { row, x: SP.x + 20, y: start ? SP.y + SP.h - 20 - h : y, w: SP.w - 40, h, opts: [] };
+        const ch = game.choices(row);
+        if (ch) {
+            const ox = SP.x + 230, ow = SP.x + SP.w - 36 - ox, gap = 10, w = (ow - gap * (ch.opts.length - 1)) / ch.opts.length;
+            ch.opts.forEach((o, i) => r.opts.push({ x: ox + i * (w + gap), w }));
+        }
+        y += h + 4;
+        return r;
+    });
+}
+function setupHit(game, x, y) {
+    const r = setupRects(game).find((q) => x >= q.x && x < q.x + q.w && y >= q.y && y < q.y + q.h);
+    if (!r) return null;
+    return { row: r.row, opt: r.opts.length ? r.opts.findIndex((o) => x >= o.x - 5 && x < o.x + o.w + 5) : -1 };
+}
+function drawSetup(cv, game, S) {
+    const P = S.P, rows = game.rows();
+    cv.fillRect(0, 44, W, 520 - 44, [3, 5, 12, 150]);
+    S.panel(cv, SP.x, SP.y, SP.w, SP.h, { r: 20, accent: HUE, glow: 0.5, barW: 80 });
+    S.label(cv, 'Set up the match', SP.x + 28, SP.y + 36, P.dim, { size: 15 });
+    S.label(cv, 'Turn: a row   ·   press: change it   ·   or tap', SP.x + SP.w - 28, SP.y + 36, P.faint, { size: 13, align: 'right' });
+    setupRects(game).forEach((r) => {
+        const on = rows[game.row] === r.row;
+        if (r.row === 'start') {
+            S.panel(cv, r.x, r.y, r.w, r.h, { r: 14, accent: HUE, glow: on ? 0.9 : 0, bar: false, fill: on ? [[0, S.mix(HUE, '#182038', 0.7)], [1, S.mix(HUE, '#0d1222', 0.82)]] : null });
+            cv.text('Start', r.x + r.w / 2, r.y + r.h / 2 + 9, 26, on ? P.ink : P.dim, { align: 'center', font: 'bold' });
+            return;
+        }
+        const ch = game.choices(r.row);
+        if (on) { cv.roundRect(r.x, r.y + 6, r.w, r.h - 12, 12, S.a(HUE, 0.10)); cv.roundRect(r.x, r.y + 18, 4, r.h - 36, 2, HUE); }
+        cv.text(ch.label, r.x + 18, r.y + r.h / 2 + 7, 21, on ? P.ink : P.dim, { font: 'bold' });
+        ch.opts.forEach((o, j) => {
+            const ox = r.opts[j].x, ow = r.opts[j].w, sel = j === ch.i, oy = r.y + 14, oh = r.h - 28;
+            if (sel) { if (on) S.glowRect(cv, ox, oy, ow, oh, oh / 2, HUE, 0.5); cv.roundRect(ox, oy, ow, oh, oh / 2, on ? HUE : S.a(HUE, 0.5)); } else cv.strokeRoundRect(ox, oy, ow, oh, oh / 2, 1.2, P.hair);
+            cv.text(o, ox + ow / 2, oy + oh / 2 + 6, 18, sel ? P.bg0 : P.dim, { align: 'center', font: 'bold' });
+        });
+        if (ch.note) cv.text(ch.note, r.x + 18, r.y + r.h - 4, 13, P.faint, { font: 'label' });
+    });
+}
+
+module.exports = { Fx, draw, art, HUE, setupRects, setupHit, drawSetup };

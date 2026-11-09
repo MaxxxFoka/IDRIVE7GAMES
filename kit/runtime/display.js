@@ -185,7 +185,9 @@ class Display {
                 this._lost();                       // (shows the HMI's bar again)
             }, 1500);
         });
-        gpu.on('ccu', (v) => { if (this.gpu !== gpu) return; if (this.onCcu && !this.own()) this.onCcu(v); else this._ccu(v); });
+        // the app holds the controller (grab, e.g. a game being played): every event is the app's, the kit's
+        // focus ring (the header's tabs, the page's targets, push left = back) stays out of it
+        gpu.on('ccu', (v) => { if (this.gpu !== gpu) return; if (this.onCcu && !this.sheet && (this.grabbing || !this.own())) this.onCcu(v); else this._ccu(v); });
         gpu.on('touch', (phase, x, y) => { if (this.gpu === gpu) this._touch(phase, x, y); });
         // the HMI was touched outside the tabs: shown again unless that left the screen
         gpu.on('closed', () => setTimeout(() => { if (this.gpu === gpu) this._syncVisible(); }, 700));

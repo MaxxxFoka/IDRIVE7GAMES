@@ -9,7 +9,10 @@
  *         page targets).
  *   game  the round, the whole page. The header's tabs: GAMES (back to the menu, the round paused),
  *         the game's own, and the kit's SETTINGS. BACK leaves the app (the round pauses; it goes on
- *         when the app is opened again).
+ *         when the app is opened again). While a game is on screen the app holds the controller:
+ *         every turn, press and push is the game's, so the knob can't wander onto the header's tabs
+ *         and close the game. A long press pauses; the pause card's "Games menu" (turn to it, press)
+ *         goes back to the menu.
  *
  * Controls: every game is played with the iDrive knob (turn, press, push N / E / S / W) and the
  * touchscreen. The steering wheel and the pedals are not read at all.
@@ -74,7 +77,7 @@ mgu.run({
                 store: store.forGame(g.id),
                 end(score) {
                     if (cur !== round || round.phase === 'over') return;
-                    round.phase = 'over'; round.score = score; round.overAt = mono();
+                    round.phase = 'over'; round.score = score; round.overAt = mono(); cardSel = 0;
                     round.prevBest = scores.best(g.id);
                     round.place = scores.add(g, score);
                     log.info(g.id + ': round over, ' + fmt(g, score) + (round.place === 1 ? ' (new best)' : ''));
@@ -100,7 +103,7 @@ mgu.run({
         };
         function pause() {
             if (!cur || cur.phase !== 'play') return;
-            cur.phase = 'paused';
+            cur.phase = 'paused'; cardSel = 0;
             call((gm) => gm.pause && gm.pause());
         }
         function resume() {
@@ -117,12 +120,26 @@ mgu.run({
         }
 
         /* ---------- input ---------- */
+        // the card over a paused or ended round: two buttons, 0 = go on / play again, 1 = the games menu
+        let cardSel = 0, cardBtns = [];
+        const OPEN_QUIET = 600;      // ms after a game opens: the press that opened it is not the game's
+        let openedAt = -1e9;
         function input(ev) {
             if (!cur || mode !== 'game' || !shown()) return;
+            const knobby = ev.type === 'knob' || ev.type === 'press' || ev.type === 'hold' || ev.type === 'push' || ev.type === 'release';
+            if (knobby && mono() - openedAt < OPEN_QUIET) return;
             if (cur.phase !== 'play') {
-                if (ev.type === 'press' || ev.type === 'tap') action();
+                if (ev.type === 'knob' && ev.delta) cardSel = ev.delta > 0 ? 1 : 0;
+                else if (ev.type === 'push' && (ev.dir === 'E' || ev.dir === 'W')) cardSel = ev.dir === 'E' ? 1 : 0;
+                else if (ev.type === 'press') { if (cardSel === 1) toMenu(); else action(); }
+                else if (ev.type === 'tap') {
+                    const b = cardBtns.find((q) => ev.x >= q.x && ev.x < q.x + q.w && ev.y >= q.y && ev.y < q.y + q.h);
+                    if (b && b.i === 1) toMenu(); else action();
+                }
                 return;
             }
+            // a long press: pause (the card then offers the way back to the menu)
+            if (ev.type === 'hold') { pause(); cardSel = 0; return; }
             call((gm) => gm.input && gm.input(ev));
         }
         // the controller: while the game holds it the renderer hands on what the HMI didn't get; the
@@ -141,11 +158,11 @@ mgu.run({
             if (state().moving) return;
             sel = games.indexOf(g);
             if (!(cur && cur.g === g && cur.phase !== 'over')) newRound(g);
-            mode = 'game'; lastT = mono();
+            mode = 'game'; lastT = mono(); openedAt = mono(); cardSel = 0;
         }
         function toMenu() { pause(); mode = 'menu'; }
         // the header's tabs: 0 = GAMES (the menu), 1 = the round's game
-        ctx.onTab((i) => { if (i === 0) toMenu(); else if (i === 1 && cur && !state().moving) { mode = 'game'; lastT = mono(); } });
+        ctx.onTab((i) => { if (i === 0) toMenu(); else if (i === 1 && cur && !state().moving && mode !== 'game') { mode = 'game'; lastT = mono(); openedAt = mono(); } });
         const tabs = () => ['Games'].concat(cur ? [cur.g.title] : []);
         const lift = {};          // per tile: 0..1, eased towards selected
         let menuT0 = mono(), lastMenu = mono();
@@ -242,20 +259,25 @@ mgu.run({
             S.panel(cv, x, y, cw, ch, { r: 22, accent: hue, glow: 0.6, barW: 96 });
             return { x, y, w: cw, h: ch, hue, f };
         }
-        /** "Press to ..." as a lit pill at the card's bottom */
-        function prompt(cv, p, s) {
-            const k = 0.65 + 0.35 * S.ease.pulse(mono(), 1400);
-            cv.alpha(p.f * k);
-            S.chip(cv, s, W / 2, p.y + p.h - 52, p.hue, { align: 'center', size: 15 });
-            cv.alpha(p.f);
+        /** The card's two buttons at its bottom: go on (or play again) and the games menu; the knob's one lit */
+        function buttons(cv, p, first) {
+            const bw = 280, bh = 52, gap = 28, y = p.y + p.h - bh - 30, x0 = W / 2 - bw - gap / 2;
+            cardBtns = [first, 'Games menu'].map((s, i) => {
+                const x = x0 + i * (bw + gap), on = i === cardSel;
+                const glow = on ? 0.7 + 0.3 * S.ease.pulse(mono(), 1400) : 0;
+                cv.roundRect(x, y, bw, bh, bh / 2, on ? S.a(p.hue, 0.22 + 0.12 * glow) : [255, 255, 255, 14]);
+                cv.strokeRoundRect(x, y, bw, bh, bh / 2, on ? 2 : 1.2, on ? p.hue : S.a(S.P.dim, 0.5));
+                cv.text(s, x + bw / 2, y + bh / 2 + 8, 22, on ? S.P.ink : S.P.dim, { align: 'center', font: 'bold' });
+                return { i, x, y, w: bw, h: bh };
+            });
+            cv.text('Turn the knob to choose, press (or tap)', W / 2, p.y + p.h - 10, 14, S.P.faint, { align: 'center', font: 'label' });
         }
         function paused(cv, t) {
-            const p = card(cv, 760, 230, cur.pausedAt);
+            const p = card(cv, 760, 270, cur.pausedAt);
             S.label(cv, cur.g.title, W / 2, p.y + 52, p.hue, { align: 'center', size: 15 });
             cv.text('Paused', W / 2, p.y + 108, 44, S.P.ink, { align: 'center', font: 'bold' });
-            if (state().moving) { cv.text('Stop the car to play', W / 2, p.y + 150, 22, S.P.warn, { align: 'center', font: 'label' }); cv.alpha(1); return; }
-            cv.text('GAMES tab: back to the menu', W / 2, p.y + 146, 20, S.P.dim, { align: 'center', font: 'label' });
-            prompt(cv, p, 'Press or tap to go on');
+            if (state().moving) { cardBtns = []; cv.text('Stop the car to play', W / 2, p.y + 150, 22, S.P.warn, { align: 'center', font: 'label' }); cv.alpha(1); return; }
+            buttons(cv, p, 'Go on');
             cv.alpha(1);
         }
         function result(cv, t) {
@@ -264,7 +286,7 @@ mgu.run({
             if (cur.err) {
                 cv.text(g.title + ' stopped', W / 2, p.y + 100, 40, S.P.bad, { align: 'center', font: 'bold' });
                 cv.text(String(cur.err.message || cur.err).slice(0, 70), W / 2, p.y + 160, 22, S.P.dim, { align: 'center', font: 'label' });
-                prompt(cv, p, 'Press or tap to try again');
+                buttons(cv, p, 'Try again');
                 cv.alpha(1);
                 return;
             }
@@ -304,8 +326,7 @@ mgu.run({
                 S.meter(cv, rx + 170, ry + 16, (rw - 170) * rf, 8, k, mine ? p.hue : S.P.faint);
                 cv.alpha(p.f);
             });
-            prompt(cv, p, 'Press or tap to play again');
-            cv.text('GAMES tab: the menu', W / 2, p.y + p.h - 14, 15, S.P.faint, { align: 'center', font: 'label' });
+            buttons(cv, p, 'Play again');
             cv.alpha(1);
         }
         ctx.loop('MAIN', 30, render);

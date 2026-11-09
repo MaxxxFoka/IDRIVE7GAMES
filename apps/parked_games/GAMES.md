@@ -83,15 +83,20 @@ Input events:
 | `ev` | |
 |---|---|
 | `{ type: 'knob', delta }` | the knob turned by `delta` clicks, + = clockwise |
-| `{ type: 'press' }` | the knob pressed |
+| `{ type: 'press' }` | the knob pressed (a long press then pauses: the game gets no event for it) |
 | `{ type: 'push', dir }` | the controller pushed `'N'`, `'E'`, `'S'` or `'W'` (sent once per push) |
 | `{ type: 'release' }` | the push let go (back in the middle) |
 | `{ type: 'touch', phase, x, y }` | a finger on the screen: `phase` `'down'`, `'move'`, `'up'`; x, y in canvas pixels |
 | `{ type: 'tap', x, y }` | a short tap (also sent as touch down / up) |
 
 The app is one screen. While a game runs, the header's tabs are GAMES (back to the menu, the round
-paused), the game's own name, and SETTINGS. BACK, MENU and OPTION always stay with the car's HMI:
-BACK leaves the app, the round pauses and goes on when the app is opened again.
+paused), the game's own name, and SETTINGS (tapped on the touchscreen). The game holds the iDrive
+controller the whole time: every turn, press and push is the game's, the knob never moves onto the
+header's tabs. A **long press** of the knob is the shell's: it pauses the round, and the pause card
+offers *Go on* or *Games menu* (turn the knob to one, press; or tap). The first 0.6 s after a game
+opens, the controller is ignored (the press that opened it is not the game's). BACK, MENU and
+OPTION always stay with the car's HMI: BACK leaves the app, the round pauses and goes on when the
+app is opened again.
 
 ## Drawing (`cv`)
 

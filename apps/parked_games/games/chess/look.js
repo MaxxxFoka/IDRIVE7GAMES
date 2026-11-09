@@ -439,7 +439,7 @@ function drawSetup(cv, g, S, ms) {
             cv.text(s, r.x + r.w / 2, r.y + r.h / 2 + 9, 24, on ? P.ink : P.dim, { align: 'center', font: 'bold' });
             if (r.row === 'continue' && g.saved) {
                 const n = Math.ceil(g.saved.moves.length / 2);
-                S.chip(cv, (g.saved.mode === 'friend' ? 'Friend' : 'Computer') + ', move ' + Math.max(1, n), r.x + r.w - 12, r.y - 14, P.gold, { align: 'right', size: 12 });
+                S.chip(cv, (g.saved.mode === 'friend' ? '2 players' : 'Computer') + ', move ' + Math.max(1, n), r.x + r.w - 12, r.y - 14, P.gold, { align: 'right', size: 12 });
             }
             return;
         }
@@ -455,7 +455,7 @@ function drawSetup(cv, g, S, ms) {
         if (ch.note) cv.text(ch.note, r.opts[0].x, r.y + r.h + 6, 14, P.faint, { font: 'label' });
     });
     if (!rows.length) return;
-    const hint = 'Turn: choose a row    Press or push: change it';
+    const hint = 'Turn: choose a row    Press: change it    Start: press or tap';
     cv.text(hint, x + w / 2, RP.y + RP.h - 104, 15, P.faint, { align: 'center', font: 'label' });
 }
 

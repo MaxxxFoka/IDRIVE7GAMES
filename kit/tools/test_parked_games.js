@@ -51,6 +51,8 @@ test('controls: knob, press, push, release', () => {
     assert.deepStrictEqual(st(65535 & 0xffff, 0, 0).length, 0);           // 65535 = no counter
     assert.deepStrictEqual(st(11, 'DREHGEBER_KURZ_GEDRUECKT', 0), [{ type: 'knob', delta: -1 }, { type: 'press' }]);
     assert.deepStrictEqual(st(11, 1, 0), []);
+    assert.deepStrictEqual(st(11, 'DREHGEBER_LANG_GEDRUECKT', 0), [{ type: 'hold' }]);      // held long: the shell's pause
+    assert.deepStrictEqual(st(11, 2, 0), []);
     assert.deepStrictEqual(st(11, 0, 'NORD_KURZ_GEDRUECKT'), [{ type: 'push', dir: 'N' }]);
     assert.ok(c.held('N'));
     assert.deepStrictEqual(st(11, 0, 0), [{ type: 'release' }]);

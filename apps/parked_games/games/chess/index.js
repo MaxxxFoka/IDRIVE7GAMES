@@ -39,7 +39,7 @@ class Game {
         this.state = 'setup';
         this.b = new E.Board();
         this.tt = E.Search.table();
-        this.setupRow = this.saved ? 0 : this.setupRows().indexOf('start');
+        this.setupRow = 0;              // Continue (a saved game), else the opponent: a stray press can't start a game
         this.sel = -1;                 // the square of the picked-up piece
         this.cursor = { kind: 'sq', sq: E.sqOf('e2') };
         this.promo = null;             // { from, to, moves, i, device }
@@ -68,7 +68,7 @@ class Game {
     }
     setupChoices(row) {
         const p = this.prefs;
-        if (row === 'mode') return { label: 'Opponent', opts: ['Computer', 'Friend'], i: p.mode === 'friend' ? 1 : 0 };
+        if (row === 'mode') return { label: 'Opponent', opts: ['Computer', '2 players'], i: p.mode === 'friend' ? 1 : 0 };
         if (row === 'level') return { label: 'Level', opts: ['Easy', 'Medium', 'Hard'], i: LEVEL_IDS.indexOf(p.level) };
         if (row === 'human') return { label: 'You play', opts: ['White', 'Black'], i: p.human };
         if (row === 'knobSide') return { label: 'Knob plays', opts: ['White', 'Black'], i: p.knobSide, note: 'touch plays ' + (p.knobSide ? 'White' : 'Black') };
@@ -450,7 +450,7 @@ class Game {
 module.exports = {
     id: 'chess',
     title: 'Chess',
-    blurb: 'Vs AI or a friend',
+    blurb: 'Vs computer or 2 players',
     order: 80,
     needs: [],
     score: { unit: 'pts', lower: false },

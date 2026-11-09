@@ -3,6 +3,7 @@
 const assert = require('assert');
 const { PaddleDuel, COURT, PADDLE, BALL_R } = require('./game');
 const plugin = require('./index');
+const look = require('./draw');
 
 let seed = 1;
 const rnd = () => { seed = (seed * 16807) % 2147483647; return (seed - 1) / 2147483646; };
@@ -109,6 +110,8 @@ function shell() {
 }
 const play = (game, s) => { for (let i = 0; i < Math.round(s * 60); i++) game.update(1000 / 60); };
 const MIDY = (COURT.top + COURT.bottom) / 2;
+/** past the setup card: the match on with the stored (or default) choices */
+const begun = (api) => { const g = plugin.create(api); g.start(); return g; };
 
 test('plugin: the module has what the shell reads', () => {
     assert.strictEqual(plugin.id, 'paddle-duel');
@@ -120,7 +123,7 @@ test('plugin: the module has what the shell reads', () => {
 });
 
 test('plugin: the knob plays the left paddle against the car', () => {
-    const game = plugin.create(shell()), g = game.g;
+    const game = begun(shell()), g = game.g;
     play(game, 0.1);
     assert.strictEqual(g.L.ctl, 'knob');
     assert.strictEqual(g.R.ctl, 'cpu');
@@ -132,19 +135,19 @@ test('plugin: the knob plays the left paddle against the car', () => {
 
 test('plugin: push left / right before the first serve picks your side and remembers it', () => {
     const api = shell();
-    const game = plugin.create(api);
+    const game = begun(api);
     game.input({ type: 'push', dir: 'E' });
     play(game, 0.05);
     assert.strictEqual(game.g.R.ctl, 'knob');
     assert.strictEqual(game.g.L.ctl, 'cpu');
     assert.strictEqual(api.saved.side, 'R');
-    const again = plugin.create(api);
+    const again = begun(api);
     play(again, 0.05);
     assert.strictEqual(again.g.R.ctl, 'knob', 'remembered');
 });
 
 test('plugin: a touch on the other half takes the car\'s paddle for a second player', () => {
-    const game = plugin.create(shell());
+    const game = begun(shell());
     game.input({ type: 'touch', phase: 'down', x: 300, y: COURT.top + 60 });
     assert.strictEqual(game.g.R.ctl, 'cpu', 'your own half does not call a second player');
     assert.ok(game.g.L.target < MIDY, 'alone, a finger on your half moves your paddle');
@@ -161,7 +164,7 @@ test('plugin: a touch on the other half takes the car\'s paddle for a second pla
 });
 
 test('plugin: two players either way round: knob on the right, touch on the left', () => {
-    const game = plugin.create(shell());
+    const game = begun(shell());
     game.input({ type: 'push', dir: 'E' });
     game.input({ type: 'touch', phase: 'down', x: 300, y: COURT.bottom - 40 });
     assert.strictEqual(game.g.L.ctl, 'touch');
@@ -171,7 +174,7 @@ test('plugin: two players either way round: knob on the right, touch on the left
 
 test('plugin: a whole match ends with api.end(longest rally), once', () => {
     const api = shell();     // the player never turns: the car wins
-    const game = plugin.create(api);
+    const game = begun(api);
     for (let i = 0; i < 60 * 900 && !api.ended; i++) game.update(1000 / 60);
     assert.strictEqual(api.ended, 1);
     assert.ok(typeof api.score === 'number');
@@ -180,7 +183,7 @@ test('plugin: a whole match ends with api.end(longest rally), once', () => {
 });
 
 test('plugin: pause stops the ball', () => {
-    const game = plugin.create(shell());
+    const game = begun(shell());
     play(game, 1.5);
     game.pause();
     const x = game.g.ball.x;
@@ -188,6 +191,51 @@ test('plugin: pause stops the ball', () => {
     assert.strictEqual(game.g.ball.x, x);
     game.resume(); play(game, 0.1);
     assert.notStrictEqual(game.g.ball.x, x);
+});
+
+test('plugin: a setup card first: nothing moves until Start', () => {
+    const game = plugin.create(shell());
+    play(game, 2);
+    assert.strictEqual(game.setup, true);
+    assert.strictEqual(game.g.state, 'ready');
+    game.input({ type: 'press' });                       // on Opponent: Car -> 2 players
+    assert.strictEqual(game.two, true);
+    assert.strictEqual(game.g.state, 'ready', 'a press on a row changes it, it does not start');
+});
+
+test('plugin: setup with the knob: 2 players, knob on the right, Start', () => {
+    const api = shell();
+    const game = plugin.create(api);
+    game.input({ type: 'press' });                       // 2 players
+    game.input({ type: 'knob', delta: 1 });              // Knob plays
+    game.input({ type: 'push', dir: 'E' });              // Right
+    game.input({ type: 'knob', delta: 3 });              // Start (clamped)
+    game.input({ type: 'press' });
+    assert.strictEqual(game.setup, false);
+    assert.strictEqual(game.g.R.ctl, 'knob');
+    assert.strictEqual(game.g.L.ctl, 'touch');
+    assert.strictEqual(game.joined, true);
+    assert.strictEqual(api.saved.two, true);
+    assert.strictEqual(api.saved.side, 'R');
+    // remembered for the next match
+    const again = plugin.create(api);
+    again.start();
+    assert.strictEqual(again.g.L.ctl, 'touch');
+});
+
+test('plugin: setup by touch: the car on Hard', () => {
+    const api = shell();
+    const game = plugin.create(api);
+    const rects = look.setupRects(game);
+    const lv = rects.find((r) => r.row === 'level'), st = rects.find((r) => r.row === 'start');
+    game.input({ type: 'touch', phase: 'down', x: lv.opts[2].x + 10, y: lv.y + 30 });
+    game.input({ type: 'touch', phase: 'up', x: lv.opts[2].x + 10, y: lv.y + 30 });
+    assert.strictEqual(game.level, 'hard');
+    game.input({ type: 'touch', phase: 'up', x: st.x + 50, y: st.y + 20 });
+    assert.strictEqual(game.setup, false);
+    assert.strictEqual(game.g.o.cpu, 'hard');
+    assert.strictEqual(game.g.R.ctl, 'cpu');
+    assert.strictEqual(api.saved.level, 'hard');
 });
 
 test('draws a frame on a recorder-like canvas without throwing', () => {

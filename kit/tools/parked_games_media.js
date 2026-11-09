@@ -92,7 +92,7 @@ const bots = {
             this.g.names = { L: 'YOU  ·  KNOB', R: 'CAR' };
             this.g.hint = null;
         };
-        gm.assign();
+        if (gm.start) gm.start(); else gm.assign();        // past the setup card
         return {};
     },
     'brick-breaker': (gm) => ({

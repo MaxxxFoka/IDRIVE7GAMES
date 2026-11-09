@@ -51,7 +51,9 @@ to BMW's apps, keeps your high scores, and pauses by itself the moment the car m
 
 One tile per game, each with its own little animated scene. Tap a tile, or turn the knob and
 press. Your best score shows on the tile once you have one. While a game runs, the header has three tabs: **GAMES** (back here, the round paused), the
-game itself, and **SETTINGS**.
+game itself, and **SETTINGS**, for the touchscreen. During a game the knob belongs to the game
+alone, so it can't wander onto the tabs and close it: **hold the knob pressed** to pause, then
+turn to *Games menu* and press to go back here.
 
 ---
 
@@ -70,7 +72,7 @@ distance in metres.
 
 <p align="center">
   <img src="docs/media/parked-games/lane-runner-result.png" alt="The result card after a Lane Runner run: 602 m, a NEW BEST badge, the top-five list and 'Press or tap to play again'" width="80%"><br>
-  <sub>Every game ends on the same result card: your score, a <i>New best</i> badge, the top five, and <i>press or tap to play again</i>.</sub>
+  <sub>Every game ends on the same result card: your score, a <i>New best</i> badge, the top five, and <i>Play again</i> or <i>Games menu</i> (turn the knob to one and press, or tap).</sub>
 </p>
 
 ### 🏓 Paddle Duel
@@ -79,10 +81,11 @@ distance in metres.
   <img src="docs/media/parked-games/paddle-duel.gif" alt="Paddle Duel: two glowing paddles on the left and right of a dark court, a ball with a purple trail flying between them" width="100%">
 </p>
 
-You against the car: **turn the knob to move your paddle**, push up or down to slide it. A
-second player can take the car's paddle by touching that half of the screen. First to 7 wins;
-the high score is the longest rally. Push the controller right before the first serve to play
-from the right side instead (remembered).
+A setup card first: play **the car** (Easy, Normal or Hard) or **2 players**, one on the knob and
+the other on the touchscreen, and choose the knob's side (all remembered). **Turn the knob to move
+your paddle**, push up or down to slide it. Against the car a second player can still take the
+car's paddle by touching that half of the screen. First to 7 wins; the high score is the longest
+rally.
 
 ### 🪂 Canyon Glide
 

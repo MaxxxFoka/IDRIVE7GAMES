@@ -2,7 +2,7 @@
   "id": "parked_games",
   "title": "Parked Games",
   "description": "Small games for when the car is parked, played with the iDrive knob (and the touchscreen)",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "vendor": "custom",
   "loggingId": "OAB1",
   "iconGlyph": "PG",

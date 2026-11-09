@@ -136,6 +136,25 @@ test('a sheet\'s press, back and touch target that throw: logged, the app runs o
     } finally { t.end(); }
 });
 
+test('the app holds the controller (grab) on a screen the kit runs: the knob goes to the app, not to the header\'s tabs', async () => {
+    const t = await setup(), c = t.c;
+    try {
+        page(t.d, 10);
+        const got = [];
+        t.d.onCcu = (v) => got.push(v);
+        // not held: the kit's focus ring has the knob
+        c.send(X_CCU, ccu(0, 0, 0)); c.send(X_CCU, ccu(1, 0, 0)); await sleep(50);
+        assert.strictEqual(got.length, 0);
+        t.d._focus(null);
+        // held: everything to the app, the focus stays nowhere (a press can't open a tab, push left can't leave)
+        t.d.grab(true);
+        c.send(X_CCU, ccu(2, 0, 0)); c.send(X_CCU, ccu(2, 1, 0)); c.send(X_CCU, ccu(2, 0, 10)); await sleep(50);
+        assert.strictEqual(got.length, 3);
+        assert.strictEqual(t.d.focusKey, null);
+        t.d.grab(false);
+    } finally { t.end(); }
+});
+
 test('not in front, then in front (not on screen yet) within 1.5 s: the app stays on the renderer', async () => {
     const t = await setup(), c = t.c;
     try {
