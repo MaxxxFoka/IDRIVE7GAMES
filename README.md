@@ -146,6 +146,23 @@ and press to pick a tool, push right off the toolbar to put a pen on the page, t
 to move it, press to put it down or lift it, and turn for fine steps. The page is saved and is
 still there next time.
 
+### ♟️ Chess
+
+<p align="center">
+  <img src="docs/media/parked-games/chess.png" alt="Chess: a teal glass board in the middle with a white bishop picked up and its moves shown as dots and rings, the players on the left and the move list with Take back and Resign on the right" width="100%">
+</p>
+
+Chess against the computer (**Easy**, **Medium** or **Hard**), or against a friend in the car:
+**one of you plays with the iDrive knob, the other on the touchscreen** (choose which side the
+knob gets). With the knob, turn through the pieces that can move, press to pick one up, turn
+through its squares and press to play. Pushing the controller moves the cursor square by square,
+and right of the board are **Take back** and **Resign**. On the screen, tap a piece and then its
+square, or drag it there. Every rule is in: castling, en passant, promotion (you choose the
+piece), and draws by stalemate, repetition, the 50-move rule and too little material. The game
+is saved after every move, so it can be continued after the car has been off. The engine is our
+own (in [`engine.js`](apps/parked_games/games/chess/engine.js), MIT like the rest): a win against
+it scores its level, more when it is quick.
+
 ---
 
 ## Safety: parked only
@@ -185,6 +202,7 @@ Every game is played with the iDrive knob alone; touch is an extra.
 | Brick Breaker | Turn: paddle. Press: launch | Up / down: long move. Right: launch | Drag or tap to place the paddle |
 | Block Drop | Turn: move. Press: rotate | Up: swap colours. Down: drop. Left / right: move | Rotate / Left / Right / Drop buttons, tap the well to swap |
 | Sketchpad | Turn: choose a tool, press: pick it. On the page: press = pen down / up, turn = fine steps | Move between tools; right off the toolbar = pen on the page; hold to move the pen | Draw with a finger, tap the tools |
+| Chess | Turn: choose a piece, then its square. Press: pick it up / play | Move the cursor a square; right of the board: Take back, Resign | Tap a piece, then its square, or drag it. Two players: one on the knob, one on touch |
 
 **Settings** (the SETTINGS tab): a *Colour theme*. The parked lock has no setting: it is always on.
 

@@ -31,7 +31,7 @@ const P = {
 const G = {
     'lane-runner': '#38d9ff', 'paddle-duel': '#9d7bff', 'canyon-glide': '#ffad42',
     'rev-keeper': '#ff5a3c', 'brick-breaker': '#ff4fa8', 'block-drop': '#6ff59a',
-    'sketchpad': '#f7e45a',
+    'sketchpad': '#f7e45a', 'chess': '#2ee6c8',
 };
 const hue = (id) => G[id] || P.cold;
 
