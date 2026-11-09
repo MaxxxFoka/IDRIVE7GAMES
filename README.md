@@ -1,13 +1,13 @@
 <h1 align="center">Parked Games for BMW iDrive 7</h1>
 
 <p align="center">
-  <b>Six original arcade games for the BMW MGU head unit (iDrive 7), all played with the iDrive knob<br>
+  <b>Eight original games for the BMW MGU head unit (iDrive 7), all played with the iDrive knob<br>
   (the touchscreen works too). No steering wheel or pedals: the games never read them.</b>
 </p>
 
 <p align="center">
   <img alt="iDrive 7 MGU" src="https://img.shields.io/badge/BMW-iDrive%207%20MGU-e4002b?style=for-the-badge">
-  <img alt="Six games" src="https://img.shields.io/badge/games-6-38d9ff?style=for-the-badge">
+  <img alt="Eight games" src="https://img.shields.io/badge/games-8-38d9ff?style=for-the-badge">
   <img alt="Parked only" src="https://img.shields.io/badge/plays-parked%20only-6ff59a?style=for-the-badge">
   <img alt="60 fps GPU" src="https://img.shields.io/badge/render-GPU%2060%20fps-9d7bff?style=for-the-badge">
   <img alt="MIT licence" src="https://img.shields.io/badge/licence-MIT-ffad42?style=for-the-badge">
@@ -18,7 +18,7 @@
 </p>
 
 Waiting in the car while it charges, or for someone at the shops? **Parked Games** turns the
-10.25" centre screen into a small arcade. It is one app with six games, all in one look
+10.25" centre screen into a small arcade. It is one app with eight games, all in one look
 ("Night Circuit": a deep night-blue backdrop, a glow colour per game, particles and glass
 panels), drawn by the car's own GPU renderer at 60 fps. It runs on the car's app platform next
 to BMW's apps, keeps your high scores, and pauses by itself the moment the car moves.
@@ -173,7 +173,7 @@ it scores its level, more when it is quick.
 
 The app is built so that it cannot be played on the move. The rule lives in the shell
 ([`apps/parked_games/vehicle.js`](apps/parked_games/vehicle.js)), so no game can get around it:
-the games play only while the car stands still (3 km/h or less). As soon as it moves, the round
+the games play only while the car stands still (15 km/h or less). As soon as it moves, the round
 pauses, the app drops back to the menu and nothing opens until the car stops again.
 
 The centre screen sits in the driver's view and the iDrive knob is in reach of the driver's seat,
@@ -222,7 +222,7 @@ node kit/tools/emu.js parked_games                       # the live emulator: ht
 
 The emulator draws every frame with the car's own render engine, compiled to WebAssembly. Click
 the tiles, use the mouse wheel or `[` `]` as the knob, `Enter` to press, the arrow keys to push.
-Under *Vehicle signals → Manual* you can raise the speed above 3 km/h and watch the games pause. More in
+Under *Vehicle signals → Manual* you can raise the speed above 15 km/h and watch the games pause. More in
 [docs/emulator.md](docs/emulator.md).
 
 Run the tests (every game played headless against the game interface):
@@ -268,6 +268,14 @@ After one or two minutes **Parked Games** appears under **Apps**. Everything is 
 `deploy/push-to-car.sh restore` puts the unit back to stock. On Windows use
 `deploy\push-to-car.ps1`; without a network, copy `dist/mgu-custom-apps/` to a USB stick and run
 `sh deploy-car.sh check` and `install` on the unit.
+
+**Updating to a newer version.** After `git pull`, build the car kit again (step 2) before
+installing (step 3): `push-to-car` copies the kit that is already in `dist/`, it does not
+build one. It now stops with *the kit is older than the code* if you forget. To see which
+version the car has, run `push-to-car.sh status` (Windows: `.\push-to-car.ps1 status -Key ...`):
+the app list shows `parked_games` with its version. 0.2.0 is the one with all eight games
+(Sketchpad and Chess are new). The new version starts the next time you open the app, or after
+the app platform restarts (the installer says which).
 
 **Status:** the games run in the emulator and the tests; the knob-only controls still want a
 round of play on the car.
@@ -324,7 +332,7 @@ original guide is kept here as [KIT_README.md](KIT_README.md).
 - The Noto Sans SC and Noto Sans KR glyphs baked into the kit's fonts are under the **SIL Open Font
   Licence 1.1** ([kit/runtime/fonts/OFL-NotoSansSC.txt](kit/runtime/fonts/OFL-NotoSansSC.txt),
   [kit/localization/fonts/OFL-NotoSansKR.txt](kit/localization/fonts/OFL-NotoSansKR.txt)).
-- The six games, their art and every picture in `docs/media/parked-games/` are original and drawn
+- The eight games, their art and every picture in `docs/media/parked-games/` are original and drawn
   in code: no outside art, sounds or game assets.
 - Chinese translation notice: [NOTICE.zh-CN.md](NOTICE.zh-CN.md).
 - BMW, iDrive and the BMW logo are trademarks of BMW AG, used here only to say which cars this

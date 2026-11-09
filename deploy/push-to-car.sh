@@ -16,6 +16,15 @@ KIT=${KIT:-$(dirname "$HERE")/dist/mgu-custom-apps}   # Chinese kit: KIT=dist/mg
 DEST=${DEST:-/var/opt/mgu-custom-apps}
 CMD=${1:-check}
 [ -d "$KIT" ] || { echo "run deploy/make-car-kit.sh first"; exit 1; }
+# a kit older than the code (e.g. after a git pull) would put the OLD apps on the car without a word:
+# install refuses it. STALE_OK=1 installs it anyway.
+if [ "$CMD" = install ] && [ "${STALE_OK:-0}" != 1 ] && [ -f "$KIT/KIT_SUMS" ]; then
+    newer=$(find "$(dirname "$HERE")/apps" "$(dirname "$HERE")/kit/runtime" -type f -newer "$KIT/KIT_SUMS" 2>/dev/null | head -n 3)
+    if [ -n "$newer" ]; then
+        echo "The kit in $KIT is older than the code, for example:"; echo "$newer" | sed 's/^/    /'
+        echo "Run deploy/make-car-kit.sh first (or STALE_OK=1 to install the old kit anyway)."; exit 1
+    fi
+fi
 SSH=(ssh -o ConnectTimeout=10)
 [ -n "${PORT:-}" ] && SSH+=(-p "$PORT")
 if [ -n "${KEY:-}" ]; then

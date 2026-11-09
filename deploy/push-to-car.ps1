@@ -16,7 +16,8 @@ param(
     [Parameter(Position = 0)][ValidateSet('check', 'install', 'status', 'restore')][string]$Cmd = 'check',
     [Parameter(Mandatory = $true)][string]$Key,
     [string]$Ip = '169.254.36.47',
-    [string]$Kit = ''
+    [string]$Kit = '',
+    [switch]$StaleOk
 )
 $ErrorActionPreference = 'Stop'
 $here = Split-Path -Parent $MyInvocation.MyCommand.Path
@@ -29,6 +30,19 @@ if (-not $Kit -or -not (Test-Path $Kit)) { throw 'mgu-custom-apps.tar.gz not fou
 if (-not (Test-Path $Key)) { throw "SSH key not found: $Key" }
 if (-not (Get-Command ssh -ErrorAction SilentlyContinue)) { throw 'ssh not found: Settings > Apps > Optional features > add "OpenSSH Client"' }
 $Kit = (Resolve-Path $Kit).Path
+# a kit older than the code (e.g. after a git pull) would put the OLD apps on the car without a word:
+# install refuses it. -StaleOk installs it anyway.
+$repo = Split-Path -Parent $here
+if ($Cmd -eq 'install' -and -not $StaleOk -and (Test-Path (Join-Path $repo 'apps'))) {
+    $built = (Get-Item $Kit).LastWriteTime
+    $newer = @(Get-ChildItem -Recurse -File -Path @((Join-Path $repo 'apps'), (Join-Path $repo 'kit\runtime')) -ErrorAction SilentlyContinue |
+        Where-Object { $_.LastWriteTime -gt $built } | Select-Object -First 3)
+    if ($newer.Count) {
+        Write-Host "The kit $Kit is older than the code, for example:"
+        $newer | ForEach-Object { Write-Host ('    ' + $_.FullName) }
+        throw 'Run deploy\make-car-kit.cmd first (or add -StaleOk to install the old kit anyway).'
+    }
+}
 $Key = (Resolve-Path $Key).Path
 
 # the same options the SSH tool uses: the car's host key changes with every flash, so never pin it
