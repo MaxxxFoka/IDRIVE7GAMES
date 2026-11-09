@@ -133,6 +133,19 @@ Spark wipes out the whole colour it lands on, and a fourth colour joins at level
 knob (turn to move, press to rotate, push up to swap colours, push down to drop) or with the
 four big buttons beside the well.
 
+### ✏️ Sketchpad
+
+<p align="center">
+  <img src="docs/media/parked-games/sketchpad.png" alt="Sketchpad: a dark page with neon drawings (a sun, a rainbow, a house on a hill) and a toolbar of colours, sizes, Undo and Clear on the left" width="100%">
+</p>
+
+A drawing pad for passengers and kids, with no score and no end. **Draw with a finger** on the
+page and tap the toolbar: eight colours, a rainbow pen, an eraser, three sizes, **Undo** and
+**Clear** (it asks *Sure?* first, and Undo brings a cleared page back). The knob works too: turn
+and press to pick a tool, push right off the toolbar to put a pen on the page, then hold a push
+to move it, press to put it down or lift it, and turn for fine steps. The page is saved and is
+still there next time.
+
 ---
 
 ## Safety: parked only
@@ -171,6 +184,7 @@ Every game is played with the iDrive knob alone; touch is an extra.
 | Rev Keeper | Turn: throttle (4 % a click) | Up / down: throttle ±20 % | |
 | Brick Breaker | Turn: paddle. Press: launch | Up / down: long move. Right: launch | Drag or tap to place the paddle |
 | Block Drop | Turn: move. Press: rotate | Up: swap colours. Down: drop. Left / right: move | Rotate / Left / Right / Drop buttons, tap the well to swap |
+| Sketchpad | Turn: choose a tool, press: pick it. On the page: press = pen down / up, turn = fine steps | Move between tools; right off the toolbar = pen on the page; hold to move the pen | Draw with a finger, tap the tools |
 
 **Settings** (the SETTINGS tab): a *Colour theme*. The parked lock has no setting: it is always on.
 
